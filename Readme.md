@@ -1,7 +1,10 @@
 
 
-`goidc-proxy` is an http proxy server that enables OIDC auth for http web-applications & microservices. The proxy sits between the http client (e.g a browser) & the upstreams (a webapp frontend, micro-services etc) and enforces that the requests are authenticated; that is, they have an active `goidc-proxy` session, that holds valid OIDC credentials (an OIDC access_token, id_token etc.). Only then, the requests are proxied to the configured upstream. 
+`goidc-proxy` is an http proxy server that enables OIDC auth for http web-applications & microservices. The proxy sits between the http client (e.g a browser) & the upstreams (webapp frontends, micro-services etc) and enforces that the requests are authenticated; that is, they have an active `goidc-proxy` session, that holds valid OIDC credentials (an OIDC access_token, id_token etc.). Only then, the requests are proxied to the configured upstream. Only one authorization server can be configured per instance. However, multiple backends can be proxied to; thus essentially enabling a Single-SignOn (SSO) solution. Currently `goidc-proxy` enforces session manangement. As a benefit of that, the upstream web application do not need to worry about it. 
 
+A `/<oidc_mount_pt>/userinfo` endpoint is also exposed by the proxy for the client or the upstream services to fetch authorization information. This requires the authorization server being used also exposes an OpenID `/userinfo` endpoint, and corresponding `scopes` were requested during OIDC auth flow for it to return the required information. Using that access_token for each session, the `goidc_proxy` can call the `/userinfo` endpoint & return the response so it can be consumed by the client or the upstream.
+
+## Supported OAuth flows:
 Currently only the authorization-code flow is supported. Once the flow is successful, OIDC credentials are stored in a session which is tracked using a cookie. The validity of the cookie is synced with the expiry set on the OIDC access_token; After expiry the session is cleared & any new requests are sent to complete the auth flow with the authorization server.
 
 In addition some basic request rewriting can be done using the `stripPrefix` setting for each route.  For more details on these settings check the Proxy configuration section below.
@@ -72,7 +75,13 @@ oidc:
   # all oidc specific endpoints will be mounted at this base path, oidc/info, oidc/userinfo etc.
   endpointMountBase: /oidc 
   # oidc auth callback path when authorization-code flow is used; 
-  authCallbackPath: /authorization-code/callback 
+  authCallbackPath: /authorization-code/callback
+  userInfoPath: /v1/userinfo # oidc userinfo endpoint path for the auth server;
+  scopes:  # requested scopes when making the auth request
+   - openid
+   - scopeC
+   - scopeB
+
 
 # SECTION 3
 # routes that will be configured at the proxy. 
@@ -112,5 +121,5 @@ Environment variables can override most of the configuration supplied via yaml p
 |GOIDC_METADATA_URL|  | **NEW:** the OIDC authorization server metadata or well-known url|
 |GOIDC_OIDC_ENDPOINTS_MOUNT_PATH| `/oidc` | the path to mount all oidc specific endpoints supplied by `goidc-proxy`  e.g `oidc/info`  & `oidc/userinfo` etc|
 |GOIDC_OIDC_ENDPOINTS_AUTH_CALLBACK_PATH| `/authorization-code/callback` | The path, part of the OIDC authorization-flow callback URL. An endpoint route will be setup on the goidc-proxy for this path to process the authorization code returned by the authorization server after authorization is complete. When authorization fails on the auth server, the error details are sent to this endpoint as well. This is path section for the URL. |
-
+|GOIDC_OIDC_USERINFO_ENDPOINT_PATH| `/v1/userinfo`| The optional userinfo endpoint for the authorization server. If supplied, the proxy exposes a `/${GOIDC_OIDC_ENDPOINTS_MOUNT_PATH}/userinfo` endpoint that returns the payload  |
 

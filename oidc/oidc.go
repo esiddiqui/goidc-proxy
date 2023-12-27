@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 
 	"github.com/esiddiqui/goidc-proxy/config"
 	_ "github.com/esiddiqui/goidc-proxy/config"
@@ -205,7 +206,8 @@ func (p *GoidcServer) GetOidcUserInfoHanlder(w http.ResponseWriter, r *http.Requ
 	}
 
 	exch := sess.(Exchange)
-	userProfileUrl := fmt.Sprintf("%v/v1/userinfo", p.metadata.Issuer) //p.cfg.Oidc.IssuerUrl + "/v1/userinfo" //TODO: @esiddiqui check if this is portable across auth servers
+	// TODO: @esiddiqui fetch this userinfo endpoint from the /.well-known/openid-configuration
+	userProfileUrl := fmt.Sprintf("%v%v", p.metadata.Issuer, p.cfg.Oidc.UserInfoPath) //TODO: @esiddiqui check if this is portable across auth servers
 	req, _ := http.NewRequest("GET", userProfileUrl, bytes.NewReader([]byte("")))
 	h := req.Header
 	h.Add("Authorization", fmt.Sprintf("Bearer %v", exch.AccessToken))
@@ -246,7 +248,7 @@ func (p *GoidcServer) GetInfoHandler(w http.ResponseWriter, r *http.Request) {
 func (p *GoidcServer) redirectToAuthServer(w http.ResponseWriter, r *http.Request) {
 
 	state := NewSessionToken()
-	fmt.Println("state value (session token): " + state)
+	log.Debugf("state value (session token): %v", state)
 
 	redirectUri := p.getRedirectUri(r)
 	log.Debugf("redirection uri: %v", redirectUri)
@@ -256,10 +258,14 @@ func (p *GoidcServer) redirectToAuthServer(w http.ResponseWriter, r *http.Reques
 	q.Add("client_id", p.cfg.Oidc.ClientId)
 	q.Add("response_type", "code")
 	q.Add("response_mode", "query")
-	q.Add("scope", "openid internal-apps") //TODO: @esiddiqui parameterize
+	scopesString := "openid-connect"
+	if len(p.cfg.Oidc.Scopes) > 0 {
+		scopesString = strings.Join(p.cfg.Oidc.Scopes, " ")
+	}
+	q.Add("scope", scopesString)
 	q.Add("redirect_uri", redirectUri)
 	q.Add("state", state)
-	q.Add("prompt", "login")
+	q.Add("prompt", "login") // this is to force login screen even when authserver session is still valid (okta specific)
 
 	authRedirectEndppoint := fmt.Sprintf("%v?%v", p.metadata.AuthorizationEndpoint, q.Encode()) //fmt.Sprintf("%v/v1/authorize?", p.cfg.Oidc.IssuerUrl) + q.Encode()
 	fmt.Printf("forwarding request to: %v\n", authRedirectEndppoint)

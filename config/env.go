@@ -23,6 +23,7 @@ type EnvConfig struct {
 
 	OidcEndpointMount string
 	AuthCallackPath   string
+	UserInfoPath      string
 }
 
 func loadFromEnv() EnvConfig {
@@ -31,17 +32,16 @@ func loadFromEnv() EnvConfig {
 		ProxyConfigPath:               readStringValueFromEnv("GOIDCFY_PROXY_CONFIG_PATH", "./resources/proxy.yml"), // required
 		UpstreamProtectedPaths:        readStringArrayValueFromEnv("GOIDC_UPSTREAM_PROTECTED_PATHS", []string{"/"}),
 		UpstreamPostLoginRedirectPath: readStringValueFromEnv("GOIDC_UPSTREAM_POST_LOGIN_REDIRECT", "/"),
-
-		SessionProvider:  readStringValueFromEnv("GOIDC_SESSION_PROVIDER", "memory"),
-		SessionRedisHost: readStringValueFromEnv("GOIDC_REDIS_HOST", ""),
-		SessionRedisPort: readInt32ValueFromEnv("GOIDC_REDIS_PORT", 6379),
-
-		ClientId:          readStringValueFromEnv("GOIDC_OIDC_CLIENT_ID", ""),
-		ClientSecret:      readStringValueFromEnv("GOIDC_OIDC_CLIENT_SECRET", ""),
-		IssuerUrl:         readStringValueFromEnv("GOIDC_ISSUER_URL", ""),
-		MetadataUrl:       readStringValueFromEnv("GOIDC_METADATA_URL", ""),
-		OidcEndpointMount: readStringValueFromEnv("GOIDC_OIDC_ENDPOINTS_MOUNT_PATH", "/oidc"),
-		AuthCallackPath:   readStringValueFromEnv("GOIDC_OIDC_ENDPOINTS_AUTH_CALLBACK_PATH", "/authorization-code/callback"),
+		SessionProvider:               readStringValueFromEnv("GOIDC_SESSION_PROVIDER", "memory"),
+		SessionRedisHost:              readStringValueFromEnv("GOIDC_REDIS_HOST", ""),
+		SessionRedisPort:              readInt32ValueFromEnv("GOIDC_REDIS_PORT", 6379),
+		ClientId:                      readStringValueFromEnv("GOIDC_OIDC_CLIENT_ID", ""),
+		ClientSecret:                  readStringValueFromEnv("GOIDC_OIDC_CLIENT_SECRET", ""),
+		IssuerUrl:                     readStringValueFromEnv("GOIDC_ISSUER_URL", ""),
+		MetadataUrl:                   readStringValueFromEnv("GOIDC_METADATA_URL", ""),
+		OidcEndpointMount:             readStringValueFromEnv("GOIDC_OIDC_ENDPOINTS_MOUNT_PATH", "/oidc"),
+		AuthCallackPath:               readStringValueFromEnv("GOIDC_OIDC_ENDPOINTS_AUTH_CALLBACK_PATH", "/authorization-code/callback"),
+		UserInfoPath:                  readStringValueFromEnv("GOIDC_OIDC_USERINFO_ENDPOINT_PATH", "/v1/userinfo"),
 	}
 }
 

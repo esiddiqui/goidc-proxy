@@ -20,6 +20,10 @@ oidc:
   metadataUrl: https://abc.secure.com/oauth2/auth/.well-known/oauth-authorization-server # metadata/well-know url
   endpointMountBase: /oidc # all oidc specific endpoints will be mounted at this base path
   authCallbackPath: /authorization-code/callback # oidc auth callback path when auth-code flow is used
+  userInfoPath: /v1/userinfo # oidc userinfo endpoint for the auth server;
+  scopes: 
+    - openid
+    - customscope
   
 
 routes: 

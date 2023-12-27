@@ -40,12 +40,14 @@ type ServerConfig struct {
 }
 
 type OidConfig struct {
-	ClientId          string `yaml:"clientId"`
-	ClientSecret      string `yaml:"clientSecret"`
-	IssuerUrl         string `yaml:"issuerUrl"` // deprecated: use metadataUrl
-	MetadataUrl       string `yaml:"metadataUrl"`
-	EndpiontMountBase string `yaml:"endpointMountBase"`
-	CallbackPath      string `yaml:"callbackPath"`
+	ClientId          string   `yaml:"clientId"`
+	ClientSecret      string   `yaml:"clientSecret"`
+	IssuerUrl         string   `yaml:"issuerUrl"` // deprecated: use metadataUrl
+	MetadataUrl       string   `yaml:"metadataUrl"`
+	EndpiontMountBase string   `yaml:"endpointMountBase"`
+	CallbackPath      string   `yaml:"callbackPath"`
+	UserInfoPath      string   `yaml:"userInfoPath"`
+	Scopes            []string `yaml:"scopes"`
 }
 
 type GoidcConfig struct {
