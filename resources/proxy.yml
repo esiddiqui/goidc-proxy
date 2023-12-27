@@ -1,0 +1,33 @@
+---
+
+
+server: 
+  port: 3939 
+  cookie:
+    name: goidcjessionid
+    session: no
+    ttl: 3h  # use go time.Duration literal format 3h, 1h20m30s etc
+    secure: yes
+  session:
+    type: memory # memory | redis
+    host: redis.cluster.local # for redis
+    port: 6379 # for redis
+
+oidc: 
+  clientID: # supplied by env var
+  clientSecret:  # supplied by env var
+  issuerUrl: https://abc.secure.com/oauth2/auth
+  metadataUrl: https://abc.secure.com/oauth2/auth/.well-known/oauth-authorization-server # metadata/well-know url
+  endpointMountBase: /oidc # all oidc specific endpoints will be mounted at this base path
+  authCallbackPath: /authorization-code/callback # oidc auth callback path when auth-code flow is used
+  
+
+routes: 
+  - prefix: /
+    stripPrefix: false 
+    upstreamUrl: http://localhost:3000
+    authRequired: yes
+  - prefix: /api/v1
+    stripPrefix: no
+    upstreamUrl: http://localhost:8080
+    authRequired: yes
