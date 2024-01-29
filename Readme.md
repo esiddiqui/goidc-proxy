@@ -68,9 +68,17 @@ oidc:
   clientID: <secret>     
   # client Secret for the  authorization-code flow; preferably supply via env. GOIDC_OIDC_CLIENT_SECRET
   clientSecret: <secret> 
-  # oidc issuerUrl, use metadataUrl preferrably; this will be deprecated
-  issuerUrl: https://domain.auth.com/oauth2/authserver 
-  # metadata/well-know url; used this instead of issuerUrl
+  # metadata can be supplied directly under this item
+  metadata: 
+    issuer: 
+    authorization_endpoint: 
+    token_endpoint: 
+    registration_endpoint: 
+    jwks_uri: 
+      :
+      :
+      :
+  # metadata/well-know url; used this instead of metadata if the auth server has a metadata endpoint
   metadataUrl: https://domain.auth.com/oauth2/authserver/.well-known/oauth-authorization-server 
   # all oidc specific endpoints will be mounted at this base path, oidc/info, oidc/userinfo etc.
   endpointMountBase: /oidc 
@@ -117,7 +125,6 @@ Environment variables can override most of the configuration supplied via yaml p
 |GOIDC_REDIS_PORT| `6739` | when `redis` session store is used, supply redis port|
 |GOIDC_OIDC_CLIENT_ID|  | OIDC application client ID for authorization-code flow |
 |GOIDC_OIDC_CLIENT_SECRET|  | OIDC application client secret for authorization-code flow |
-|GOIDC_ISSUER_URL|  | **DEPRECATED:** issuer url for the OIDC authorization server|
 |GOIDC_METADATA_URL|  | **NEW:** the OIDC authorization server metadata or well-known url|
 |GOIDC_OIDC_ENDPOINTS_MOUNT_PATH| `/oidc` | the path to mount all oidc specific endpoints supplied by `goidc-proxy`  e.g `oidc/info`  & `oidc/userinfo` etc|
 |GOIDC_OIDC_ENDPOINTS_AUTH_CALLBACK_PATH| `/authorization-code/callback` | The path, part of the OIDC authorization-flow callback URL. An endpoint route will be setup on the goidc-proxy for this path to process the authorization code returned by the authorization server after authorization is complete. When authorization fails on the auth server, the error details are sent to this endpoint as well. This is path section for the URL. |
