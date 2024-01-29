@@ -15,15 +15,13 @@ type EnvConfig struct {
 	SessionProvider               string   //  memory | redis
 	SessionRedisHost              string   // redis host
 	SessionRedisPort              int32    // 6579
-
-	ClientId     string
-	ClientSecret string
-	IssuerUrl    string
-	MetadataUrl  string
-
-	OidcEndpointMount string
-	AuthCallackPath   string
-	UserInfoPath      string
+	ClientId                      string
+	ClientSecret                  string
+	MetadataUrl                   string
+	OpenIdUrl                     string
+	OidcEndpointMount             string
+	AuthCallackPath               string
+	UserInfoPath                  string
 }
 
 func loadFromEnv() EnvConfig {
@@ -37,8 +35,8 @@ func loadFromEnv() EnvConfig {
 		SessionRedisPort:              readInt32ValueFromEnv("GOIDC_REDIS_PORT", 6379),
 		ClientId:                      readStringValueFromEnv("GOIDC_OIDC_CLIENT_ID", ""),
 		ClientSecret:                  readStringValueFromEnv("GOIDC_OIDC_CLIENT_SECRET", ""),
-		IssuerUrl:                     readStringValueFromEnv("GOIDC_ISSUER_URL", ""),
 		MetadataUrl:                   readStringValueFromEnv("GOIDC_METADATA_URL", ""),
+		OpenIdUrl:                     readStringValueFromEnv("GOIDC_OPENID_URL", ""),
 		OidcEndpointMount:             readStringValueFromEnv("GOIDC_OIDC_ENDPOINTS_MOUNT_PATH", "/oidc"),
 		AuthCallackPath:               readStringValueFromEnv("GOIDC_OIDC_ENDPOINTS_AUTH_CALLBACK_PATH", "/authorization-code/callback"),
 		UserInfoPath:                  readStringValueFromEnv("GOIDC_OIDC_USERINFO_ENDPOINT_PATH", "/v1/userinfo"),

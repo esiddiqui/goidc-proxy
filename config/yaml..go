@@ -40,14 +40,16 @@ type ServerConfig struct {
 }
 
 type OidConfig struct {
-	ClientId          string   `yaml:"clientId"`
-	ClientSecret      string   `yaml:"clientSecret"`
-	IssuerUrl         string   `yaml:"issuerUrl"` // deprecated: use metadataUrl
-	MetadataUrl       string   `yaml:"metadataUrl"`
-	EndpiontMountBase string   `yaml:"endpointMountBase"`
-	CallbackPath      string   `yaml:"callbackPath"`
-	UserInfoPath      string   `yaml:"userInfoPath"`
-	Scopes            []string `yaml:"scopes"`
+	ClientId          string         `yaml:"clientId"`
+	ClientSecret      string         `yaml:"clientSecret"`
+	MetadataUrl       string         `yaml:"metadataUrl"`       // public url for fetching metadata
+	Metadata          *GoidcMetadata `yaml:"metadata"`          // if supplied `metadataUrl` is ignored
+	OpenIdMetadataUrl string         `yaml:"openIdMetadataUrl"` // public url for fetching openId metadata
+	OpenIdMetadata    *GoidcConfig   `yaml:"openIdMetadata"`    // if supplied `openIdMetadataUrl` is ignored
+	EndpiontMountBase string         `yaml:"endpointMountBase"`
+	CallbackPath      string         `yaml:"callbackPath"`
+	UserInfoPath      string         `yaml:"userInfoPath"`
+	Scopes            []string       `yaml:"scopes"`
 }
 
 type GoidcConfig struct {
@@ -60,6 +62,8 @@ type GoidcConfig struct {
 // loops through all the defined routes & matches the
 // prefix with the incoming path; the longest-matching path
 // is returned
+// TODO @esiddiqui this must be a helper func in the oidc package
+// as the logic is pretty specific to our proxy...
 func (p GoidcConfig) FindRouteForPath(path string) *Route {
 
 	var selected Route

@@ -36,10 +36,7 @@ func NewGoidcReverseProxy(cfg config.GoidcConfig) *GoidcReverseProxy {
 				// now when stripPrefix == yes, we will first remove the requestedPath it.
 				strippedTargetPathPrefix := strings.TrimSuffix(origTargetPath, origRequestedPath)
 				// remove trailing slash
-				if strings.HasSuffix(strippedTargetPathPrefix, "/") {
-					strippedTargetPathPrefix = strings.TrimSuffix(strippedTargetPathPrefix, "/")
-				}
-
+				strippedTargetPathPrefix = strings.TrimSuffix(strippedTargetPathPrefix, "/")
 				// now we remove the matched prefix from the beginning of requestedPath
 				strippedOutPath := strings.TrimPrefix(origRequestedPath, route.Prefix)
 				// ensure leading slash

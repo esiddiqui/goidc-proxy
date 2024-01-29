@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"strings"
 
 	"github.com/esiddiqui/goidc-proxy/config"
@@ -24,7 +25,7 @@ const (
 type GoidcServer struct {
 	cfg           *config.GoidcConfig
 	rproxy        *GoidcReverseProxy
-	metadata      *GoidcMetadata
+	metadata      *config.GoidcMetadata
 	cookieManager CookieManager
 	sessionStore  SessionStore
 	requestCache  StateRequestCache
@@ -53,16 +54,12 @@ func NewGoidcProxyServer(cfg *config.GoidcConfig) (*GoidcServer, error) {
 	// initializing cookie manager
 	cookieMgr := NewCookieManager(cfg.Server.Cookie.Name)
 
-	metadata := &GoidcMetadata{}
-	if cfg.Oidc.MetadataUrl != "" {
+	// configure oidc
+	// var metadata *config.GoidcMetadata
+	metadata := cfg.Oidc.Metadata
+	if cfg.Oidc.Metadata == nil {
 		log.Infof("loading metadata from metadataUrl %v", cfg.Oidc.MetadataUrl)
-		metadata, err = NewFromMetadataUrl(cfg.Oidc.MetadataUrl)
-		if err != nil {
-			return nil, err
-		}
-	} else if cfg.Oidc.IssuerUrl != "" {
-		log.Infof("loading metadata from issueUrl %v", cfg.Oidc.IssuerUrl)
-		metadata, err = NewFromIssuerUrl(cfg.Oidc.IssuerUrl)
+		metadata, err = config.NewFromMetadataUrl(cfg.Oidc.MetadataUrl)
 		if err != nil {
 			return nil, err
 		}
@@ -302,23 +299,42 @@ func (p *GoidcServer) exchangeCode(code string, r *http.Request) (*Exchange, err
 	basicAuthCredentials := base64.StdEncoding.EncodeToString(
 		[]byte(clientId + ":" + clientSecret))
 
-	q := r.URL.Query()
-	q.Add("grant_type", "authorization_code")
-	q.Set("code", code)
-
+	// q := r.URL.Query()
+	// q.Set("grant_type", "authorization_code")
+	// q.Set("code", code)
 	redirectUri := p.getRedirectUri(r)
 	log.Debugf("redirection uri: %v", redirectUri)
-	q.Add("redirect_uri", redirectUri)
+	// q.Set("redirect_uri", redirectUri)
+
+	// set form data
+	data := url.Values{}
+	data.Set("grant_type", "authorization_code")
+	data.Set("code", code)
+	data.Set("redirect_uri", redirectUri)
 
 	// TODO: @esiddiqui - confirm /v1/token is correctly specified for the Auth Server
-	url := fmt.Sprintf("%v?%v", p.metadata.TokenEndpoint, q.Encode()) //p.cfg.Oidc.IssuerUrl + "/v1/token?" + q.Encode()
-	req, _ := http.NewRequest("POST", url, bytes.NewReader([]byte("")))
+	// url := fmt.Sprintf("%v?%v", p.metadata.TokenEndpoint, q.Encode()) //p.cfg.Oidc.IssuerUrl + "/v1/token?" + q.Encode()
+
+	url := fmt.Sprintf("%v", p.metadata.TokenEndpoint) //p.cfg.Oidc.IssuerUrl + "/v1/token?" + q.Encode()
+	log.Infof("auth code exchange url %v", url)
+	req, _ := http.NewRequest("POST", url, strings.NewReader(data.Encode()))
+	// req, _ := http.NewRequest("POST", url, bytes.NewReader([]byte("")))
+
+	// set headers
 	h := req.Header
 	h.Add("Authorization", fmt.Sprintf("Basic %v", basicAuthCredentials))
 	h.Add("Accept", "application/json")
+	h.Add("User-Agent", "goidc-proxy")
 	h.Add("Content-Type", "application/x-www-form-urlencoded")
-	h.Add("Connection", "close")
-	h.Add("Content-Length", "0")
+	// h.Add("Connection", "close")
+	// h.Add("Content-Length", "0")
+
+	// q := req.URL.Query()
+	// q.Set("grant_type", "authorization_code")
+	// q.Set("code", code)
+	// redirectUri := p.getRedirectUri(r)
+	// log.Debugf("redirection uri: %v", redirectUri)
+	// q.Set("redirect_uri", redirectUri)
 
 	client := &http.Client{}
 	resp, err := client.Do(req)

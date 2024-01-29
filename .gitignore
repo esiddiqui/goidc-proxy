@@ -1,4 +1,6 @@
 .vscode
 goidc-proxy
+proxy.yml
 /bin
+/tmp
 Notes.md

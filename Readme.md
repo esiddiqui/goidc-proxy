@@ -111,7 +111,7 @@ Environment variables can override most of the configuration supplied via yaml p
 | Env var | Default | Description |
 |---|---|---|
 |GOIDC_PROXY_PORT|`3939`| proxy server listen port|
-|GOIDCFY_PROXY_CONFIG_PATH|`./resources/proxy.yml`| proxy server configuration file; this is read first to read configuration from the yaml. All other missing values, not supplied in the yaml are overriden from the environment afterwards|
+|GOIDC_PROXY_CONFIG_PATH|`./resources/proxy.yml`| proxy server configuration file; this is read first to read configuration from the yaml. All other missing values, not supplied in the yaml are overriden from the environment afterwards|
 |GOIDC_SESSION_PROVIDER| `memory`| session storage to use, default is `memory` but `redis` is also available |
 |GOIDC_REDIS_HOST| |  when `redis` session store is used, supply redis host|
 |GOIDC_REDIS_PORT| `6739` | when `redis` session store is used, supply redis port|

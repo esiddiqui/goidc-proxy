@@ -62,8 +62,12 @@ func overrideFromEnv(env EnvConfig, yaml *GoidcConfig) {
 		yaml.Oidc.ClientSecret = env.ClientSecret
 	}
 
-	if env.IssuerUrl != "" {
-		yaml.Oidc.IssuerUrl = env.IssuerUrl
+	if env.MetadataUrl != "" {
+		yaml.Oidc.MetadataUrl = env.MetadataUrl
+	}
+
+	if env.OpenIdUrl != "" {
+		yaml.Oidc.OpenIdMetadataUrl = env.OpenIdUrl
 	}
 
 	if env.OidcEndpointMount != "" {
@@ -73,5 +77,4 @@ func overrideFromEnv(env EnvConfig, yaml *GoidcConfig) {
 	if env.AuthCallackPath != "" {
 		yaml.Oidc.CallbackPath = env.AuthCallackPath
 	}
-
 }
