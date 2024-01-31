@@ -4,6 +4,7 @@ import (
 	"net/url"
 	"os"
 
+	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v2"
 )
 
@@ -11,6 +12,7 @@ func LoadConfig() *GoidcConfig {
 	env := loadFromEnv()
 
 	path := env.ProxyConfigPath
+	logrus.Infof("loding config from %v", path)
 	yaml, err := loadFromFile(path)
 	if err != nil {
 		panic(err)

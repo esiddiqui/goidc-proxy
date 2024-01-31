@@ -22,6 +22,7 @@ func (p *GoidcServer) startHttpServer() error {
 	}
 
 	// set up all <oidc>/ path handlers
+	http.HandleFunc(fmt.Sprintf("%v/session", cfg.Oidc.EndpiontMountBase), p.GetOidcSessionHanlder)
 	http.HandleFunc(fmt.Sprintf("%v/userinfo", cfg.Oidc.EndpiontMountBase), p.GetOidcUserInfoHanlder)
 	http.HandleFunc(fmt.Sprintf("%v/info", cfg.Oidc.EndpiontMountBase), p.GetInfoHandler)
 	http.HandleFunc(fmt.Sprintf("%v%v", cfg.Oidc.EndpiontMountBase, cfg.Oidc.CallbackPath), p.AuthCodeCallbackHandler)

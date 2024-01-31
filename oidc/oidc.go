@@ -225,6 +225,29 @@ func (p *GoidcServer) GetOidcUserInfoHanlder(w http.ResponseWriter, r *http.Requ
 	_, _ = w.Write(body)
 }
 
+// GetOidcSessionHanlder is the http handler for the GET /<oidcEndpointMount>/userinfo
+// Ex from Okta: https://developer.okta.com/docs/reference/api/oidc/#userinfo
+func (p *GoidcServer) GetOidcSessionHanlder(w http.ResponseWriter, r *http.Request) {
+
+	// read cookie value
+	token, err := p.cookieManager.GetSessionToken(r)
+	if err != nil {
+		p.redirectToAuthServer(w, r)
+		return
+	}
+
+	sessionInfo := make(map[string]any)
+	sessionInfo["session_id"] = token
+	sess, err := p.sessionStore.GetSession(*token)
+	if err != nil {
+		sess = err.Error()
+	}
+	sessionInfo["access_token"] = sess
+	bytes, _ := json.Marshal(sessionInfo)
+	_, _ = w.Write(bytes)
+
+}
+
 // GetInfoHandler is an http hanlder supplied by the GoidcProxyServer for the GET /<oidcEndpointMount>/info
 func (p *GoidcServer) GetInfoHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("content-type", "application/json")

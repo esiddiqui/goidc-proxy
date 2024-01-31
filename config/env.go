@@ -27,7 +27,7 @@ type EnvConfig struct {
 func loadFromEnv() EnvConfig {
 	return EnvConfig{
 		ProxyPort:                     readInt32ValueFromEnv("GOIDC_PROXY_PORT", 3939),
-		ProxyConfigPath:               readStringValueFromEnv("GOIDCFY_PROXY_CONFIG_PATH", "./resources/proxy.yml"), // required
+		ProxyConfigPath:               readStringValueFromEnv("GOIDC_PROXY_CONFIG_PATH", "./resources/proxy.yml"), // required
 		UpstreamProtectedPaths:        readStringArrayValueFromEnv("GOIDC_UPSTREAM_PROTECTED_PATHS", []string{"/"}),
 		UpstreamPostLoginRedirectPath: readStringValueFromEnv("GOIDC_UPSTREAM_POST_LOGIN_REDIRECT", "/"),
 		SessionProvider:               readStringValueFromEnv("GOIDC_SESSION_PROVIDER", "memory"),
