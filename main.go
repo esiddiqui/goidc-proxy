@@ -1,18 +1,18 @@
 package main
 
 import (
-	"github.com/esiddiqui/goidc-proxy/config"
-	"github.com/esiddiqui/goidc-proxy/oidc"
-	log "github.com/sirupsen/logrus"
+	"github.com/esiddiqui/goidc-proxy/cmd"
 )
 
 func main() {
 
-	cfg := config.LoadConfig()
-	_, err := oidc.NewGoidcProxyServer(cfg)
-	if err != nil {
-		panic(err)
-	}
+	cmd.Exec()
+
+	// cfg := config.LoadConfig()
+	// _, err := oidc.NewGoidcProxyServer(cfg)
+	// if err != nil {
+	// 	panic(err)
+	// }
 	/*
 		// set up routes deinfed in the proxy config to be handled by protected path handler
 		for _, route := range cfg.Routes {
@@ -31,7 +31,7 @@ func main() {
 		log.Infof("starting goidc-proxy server on port %v", cfg.Server.Port)
 		_ = http.ListenAndServe(fmt.Sprintf(":%v", cfg.Server.Port), nil)
 	*/
-	log.Info("goidc-proxy is up")
-	ch := make(chan bool)
-	<-ch
+	// log.Info("goidc-proxy is up")
+	// ch := make(chan bool)
+	// <-ch
 }
