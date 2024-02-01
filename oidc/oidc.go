@@ -278,7 +278,7 @@ func (p *GoidcServer) redirectToAuthServer(w http.ResponseWriter, r *http.Reques
 	q.Add("client_id", p.cfg.Oidc.ClientId)
 	q.Add("response_type", "code")
 	q.Add("response_mode", "query")
-	scopesString := "openid-connect"
+	scopesString := ""
 	if len(p.cfg.Oidc.Scopes) > 0 {
 		scopesString = strings.Join(p.cfg.Oidc.Scopes, " ")
 	}
