@@ -22,10 +22,14 @@ func (p *GoidcServer) startHttpServer() error {
 	}
 
 	// set up all <oidc>/ path handlers
-	http.HandleFunc(fmt.Sprintf("%v/session", cfg.Oidc.EndpiontMountBase), p.GetOidcSessionHanlder)
-	http.HandleFunc(fmt.Sprintf("%v/userinfo", cfg.Oidc.EndpiontMountBase), p.GetOidcUserInfoHanlder)
-	http.HandleFunc(fmt.Sprintf("%v/info", cfg.Oidc.EndpiontMountBase), p.GetInfoHandler)
-	http.HandleFunc(fmt.Sprintf("%v%v", cfg.Oidc.EndpiontMountBase, cfg.Oidc.CallbackPath), p.AuthCodeCallbackHandler)
+	c := cfg.Oidc
+	http.HandleFunc(fmt.Sprintf("%v%v", *c.EndpiontMountBase, *c.SessionPath), p.GetOidcSessionHanlder)
+	http.HandleFunc(fmt.Sprintf("%v%v", *c.EndpiontMountBase, *c.UserInfoPath), p.GetOidcUserInfoHanlder)
+	http.HandleFunc(fmt.Sprintf("%v%v", *c.EndpiontMountBase, *c.InfoPath), p.GetInfoHandler)
+
+	var authCallbackPathFull = fmt.Sprintf("%v%v", *c.EndpiontMountBase, *c.CallbackPath)
+	log.WithField("path", authCallbackPathFull).Debug("setting auth callback path")
+	http.HandleFunc(authCallbackPathFull, p.AuthCodeCallbackHandler)
 
 	log.Infof("starting goidc-proxy server on port %v", cfg.Server.Port)
 	return http.ListenAndServe(fmt.Sprintf(":%v", cfg.Server.Port), nil)

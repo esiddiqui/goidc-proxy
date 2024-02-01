@@ -118,15 +118,6 @@ Environment variables can override most of the configuration supplied via yaml p
 
 | Env var | Default | Description |
 |---|---|---|
-|GOIDC_PROXY_PORT|`3939`| proxy server listen port|
-|GOIDC_PROXY_CONFIG_PATH|`./resources/proxy.yml`| proxy server configuration file; this is read first to read configuration from the yaml. All other missing values, not supplied in the yaml are overriden from the environment afterwards|
-|GOIDC_SESSION_PROVIDER| `memory`| session storage to use, default is `memory` but `redis` is also available |
-|GOIDC_REDIS_HOST| |  when `redis` session store is used, supply redis host|
-|GOIDC_REDIS_PORT| `6739` | when `redis` session store is used, supply redis port|
-|GOIDC_OIDC_CLIENT_ID|  | OIDC application client ID for authorization-code flow |
-|GOIDC_OIDC_CLIENT_SECRET|  | OIDC application client secret for authorization-code flow |
-|GOIDC_METADATA_URL|  | **NEW:** the OIDC authorization server metadata or well-known url|
-|GOIDC_OIDC_ENDPOINTS_MOUNT_PATH| `/oidc` | the path to mount all oidc specific endpoints supplied by `goidc-proxy`  e.g `oidc/info`  & `oidc/userinfo` etc|
-|GOIDC_OIDC_ENDPOINTS_AUTH_CALLBACK_PATH| `/authorization-code/callback` | The path, part of the OIDC authorization-flow callback URL. An endpoint route will be setup on the goidc-proxy for this path to process the authorization code returned by the authorization server after authorization is complete. When authorization fails on the auth server, the error details are sent to this endpoint as well. This is path section for the URL. |
-|GOIDC_OIDC_USERINFO_ENDPOINT_PATH| `/v1/userinfo`| The optional userinfo endpoint for the authorization server. If supplied, the proxy exposes a `/${GOIDC_OIDC_ENDPOINTS_MOUNT_PATH}/userinfo` endpoint that returns the payload  |
+|GOIDC_CLIENT_ID|  | OIDC application client ID for authorization-code flow |
+|GOIDC_CLIENT_SECRET|  | OIDC application client secret for authorization-code flow |
 

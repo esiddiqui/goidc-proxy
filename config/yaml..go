@@ -46,9 +46,11 @@ type OidConfig struct {
 	Metadata          *GoidcMetadata `yaml:"metadata"`          // if supplied `metadataUrl` is ignored
 	OpenIdMetadataUrl string         `yaml:"openIdMetadataUrl"` // public url for fetching openId metadata
 	OpenIdMetadata    *GoidcConfig   `yaml:"openIdMetadata"`    // if supplied `openIdMetadataUrl` is ignored
-	EndpiontMountBase string         `yaml:"endpointMountBase"`
-	CallbackPath      string         `yaml:"callbackPath"`
-	UserInfoPath      string         `yaml:"userInfoPath"`
+	EndpiontMountBase *string        `yaml:"endpointMountBase"` // the base path to mount all oidc paths
+	CallbackPath      *string        `yaml:"callbackPath"`      // sub-path to handle auth-code callback
+	UserInfoPath      *string        `yaml:"userInfoPath"`      // sub-path to handle userInfo path (available when oidc userInfo endpoint exists)
+	InfoPath          *string        `yaml:"infoPath"`          // sub-path for info path
+	SessionPath       *string        `yaml:"sessionPath"`       // sub-path for session path
 	Scopes            []string       `yaml:"scopes"`
 }
 

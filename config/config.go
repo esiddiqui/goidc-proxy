@@ -4,22 +4,64 @@ import (
 	"net/url"
 	"os"
 
-	"github.com/sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v2"
 )
 
-func LoadConfig() *GoidcConfig {
-	env := loadFromEnv()
+var (
+	defaultOidcMountBase    string = "/oidc"
+	defaultAuthCallbackPath string = "/authorization-code/callback"
+	defaultSessionPath      string = "/session"
+	defaultUserInfoPath     string = "/userInfo"
+	defaultInfoPath         string = "/info"
+)
 
-	path := env.ProxyConfigPath
-	logrus.Infof("loding config from %v", path)
+func LoadConfig(path string) *GoidcConfig {
+
+	log.WithField("source", path).Info("loading config")
 	yaml, err := loadFromFile(path)
 	if err != nil {
 		panic(err)
 	}
 
+	setDefaults(yaml)
+
+	log.WithField("srouce", "environment").Debug("loading config")
+	env := loadFromEnv()
 	overrideFromEnv(env, yaml)
 	return yaml
+}
+
+// set defaults
+func setDefaults(cfg *GoidcConfig) {
+
+	oidc := &cfg.Oidc
+
+	if oidc.EndpiontMountBase == nil {
+		log.WithField("oidc.endpointMountBase", defaultOidcMountBase).Debug("setting value")
+		oidc.EndpiontMountBase = &defaultOidcMountBase
+	}
+
+	if oidc.CallbackPath == nil {
+		log.WithField("oidc.callbackPath", defaultAuthCallbackPath).Debug("setting value")
+		oidc.CallbackPath = &defaultAuthCallbackPath
+	}
+
+	if oidc.UserInfoPath == nil {
+		log.WithField("oidc.userInfoPath", defaultUserInfoPath).Debug("setting value")
+		oidc.UserInfoPath = &defaultUserInfoPath
+	}
+
+	if oidc.InfoPath == nil {
+		log.WithField("oidc.infoPath", defaultInfoPath).Debug("setting value")
+		oidc.InfoPath = &defaultInfoPath
+	}
+
+	if oidc.SessionPath == nil {
+		log.WithField("oidc.sessionPath", defaultSessionPath).Debug("setting value")
+		oidc.SessionPath = &defaultSessionPath
+	}
+
 }
 
 // loadProxyConfig reads & parses the proxy config from the supplied path
@@ -54,29 +96,17 @@ func loadFromFile(path string) (*GoidcConfig, error) {
 }
 
 // overrideFromEnv override GoidcConfig from env
+// env values if set will always override the values from yaml config
 func overrideFromEnv(env EnvConfig, yaml *GoidcConfig) {
 
 	if env.ClientId != "" {
+		log.Debug("the value of client_id is being overridden from env")
 		yaml.Oidc.ClientId = env.ClientId
 	}
 
 	if env.ClientSecret != "" {
+		log.Debug("the value of client_secret is being overridden from env")
 		yaml.Oidc.ClientSecret = env.ClientSecret
 	}
 
-	if env.MetadataUrl != "" {
-		yaml.Oidc.MetadataUrl = env.MetadataUrl
-	}
-
-	if env.OpenIdUrl != "" {
-		yaml.Oidc.OpenIdMetadataUrl = env.OpenIdUrl
-	}
-
-	if env.OidcEndpointMount != "" {
-		yaml.Oidc.EndpiontMountBase = env.OidcEndpointMount
-	}
-
-	if env.AuthCallackPath != "" {
-		yaml.Oidc.CallbackPath = env.AuthCallackPath
-	}
 }

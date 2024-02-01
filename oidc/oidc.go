@@ -304,8 +304,8 @@ func (p *GoidcServer) getRedirectUri(r *http.Request) string {
 		goidcScheme = "https"
 	}
 	goidcHost := r.Host
-	goidcMount := config.Oidc.EndpiontMountBase
-	goidcCallbackPath := config.Oidc.CallbackPath
+	goidcMount := *config.Oidc.EndpiontMountBase
+	goidcCallbackPath := *config.Oidc.CallbackPath
 	baseUri := fmt.Sprintf("%v://%v", goidcScheme, goidcHost)                    // http://<host-header>:3000
 	redirectUri := fmt.Sprintf("%v%v%v", baseUri, goidcMount, goidcCallbackPath) // baseUri ^^ + /<oidcMount> + /<callbackPath>
 	log.Infof(redirectUri)
