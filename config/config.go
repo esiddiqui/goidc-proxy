@@ -12,7 +12,7 @@ var (
 	defaultOidcMountBase    string = "/oidc"
 	defaultAuthCallbackPath string = "/authorization-code/callback"
 	defaultSessionPath      string = "/session"
-	defaultUserInfoPath     string = "/userInfo"
+	defaultUserInfoPath     string = "/userinfo"
 	defaultInfoPath         string = "/info"
 )
 

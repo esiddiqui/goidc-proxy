@@ -4,8 +4,11 @@ import (
 	"net/http"
 )
 
+type Base map[string]any
+
 // Exchange respresents the payload for oidc token exchange message
 type Exchange struct {
+	Base
 	Error            string `json:"error,omitempty"`
 	ErrorDescription string `json:"error_description,omitempty"`
 	AccessToken      string `json:"access_token,omitempty"`

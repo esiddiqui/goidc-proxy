@@ -2,7 +2,6 @@ package config
 
 import (
 	"net/url"
-	"strings"
 )
 
 type Route struct {
@@ -23,6 +22,7 @@ type CookieConfig struct {
 type SessionType string
 
 const (
+	SessionTypeNone   SessionType = "none"
 	SessionTypeMemory SessionType = "memory"
 	SessionTypeRedis  SessionType = "redis"
 )
@@ -58,30 +58,4 @@ type GoidcConfig struct {
 	Server ServerConfig `yaml:"server"`
 	Oidc   OidConfig    `yaml:"oidc"`
 	Routes []Route      `yaml:"routes"`
-}
-
-// find mapping that best matches the supplied path
-// loops through all the defined routes & matches the
-// prefix with the incoming path; the longest-matching path
-// is returned
-// TODO @esiddiqui this must be a helper func in the oidc package
-// as the logic is pretty specific to our proxy...
-func (p GoidcConfig) FindRouteForPath(path string) *Route {
-
-	var selected Route
-	var found bool
-	for _, m := range p.Routes {
-		if strings.HasPrefix(path, m.Prefix) {
-			if len(m.Prefix) > len(selected.Prefix) {
-				selected = m
-				found = true
-			}
-		}
-	}
-
-	if !found {
-		return nil
-	}
-
-	return &selected
 }

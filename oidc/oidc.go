@@ -33,35 +33,43 @@ type GoidcServer struct {
 
 // NewGoidcProxyServer sets up all required pieces for the goidc-proxy, any critical
 // failures will result in a non-nil error being returned & a panic
-func NewGoidcProxyServer(cfg *config.GoidcConfig) (*GoidcServer, error) {
+func StartGoidcProxyServer(cfg *config.GoidcConfig) error {
 
 	var err error
 	if cfg == nil {
-		return nil, errors.Errorf("invalid or nil config supplied to initialize GoidcProxyServer")
+		return errors.Errorf("invalid or nil config supplied to initialize GoidcProxyServer")
 	}
 
+	// TODO: @esiddiqui convert this to a better session handler...
 	log.Info("Initializing session provider")
 	var sess SessionStore
-	if cfg.Server.Session.Type == config.SessionTypeMemory {
+	if cfg.Server.Session.Type == config.SessionTypeNone {
+		log.WithField("Status", "Disabled").Warnf("session management")
+	} else if cfg.Server.Session.Type == config.SessionTypeMemory {
+		log.WithField("Status", "Memory").Infof("session management")
 		sess = NewInMemorySessionStore()
 	} else {
-		return nil, errors.New("redis is currently not supported as a session store")
+		log.WithField("Status", "Disabled").Infof("session management")
+		log.Warn("redis is currently not supported as a session store")
 	}
 
-	// initializing state request cache
+	// initializing state request cache;
+	// this keeps track fo the orignal request before oidc auth flows. after auth is
+	// complete, tries to rewrite the proxied request to match the original.
+	//
+	// TODO: @esiddiqui another candidate to be moved into the session
 	reqCache := make(StateRequestCache)
 
 	// initializing cookie manager
 	cookieMgr := NewCookieManager(cfg.Server.Cookie.Name)
 
 	// configure oidc
-	// var metadata *config.GoidcMetadata
 	metadata := cfg.Oidc.Metadata
 	if cfg.Oidc.Metadata == nil {
 		log.Infof("loading metadata from metadataUrl %v", cfg.Oidc.MetadataUrl)
 		metadata, err = config.NewFromMetadataUrl(cfg.Oidc.MetadataUrl)
 		if err != nil {
-			return nil, err
+			return err
 		}
 	}
 
@@ -71,16 +79,52 @@ func NewGoidcProxyServer(cfg *config.GoidcConfig) (*GoidcServer, error) {
 		sessionStore:  sess,
 		cookieManager: cookieMgr,
 		requestCache:  reqCache,
-		rproxy:        NewGoidcReverseProxy(*cfg),
+		rproxy:        NewGoidcReverseProxy(cfg),
 	}
 
 	err = server.startHttpServer()
-	return server, err
+	return err
+}
+
+// startHttpServer starts an http server
+func (p *GoidcServer) startHttpServer() error {
+
+	cfg := p.cfg
+
+	// set up routes deinfed in the proxy config to be handled by protected path handler
+	for _, route := range cfg.Routes {
+		if route.AuthRequired {
+			http.HandleFunc(route.Prefix, p.protectedPathHandler)
+		} else {
+			http.HandleFunc(route.Prefix, p.unProtectedPathHandler)
+		}
+	}
+
+	// set up all <oidc>/ path handlers
+	c := cfg.Oidc
+	http.HandleFunc(fmt.Sprintf("%v%v", *c.EndpiontMountBase, *c.SessionPath), p.getOidcSessionHanlder)
+	http.HandleFunc(fmt.Sprintf("%v%v", *c.EndpiontMountBase, *c.UserInfoPath), p.getOidcUserInfoHanlder)
+	http.HandleFunc(fmt.Sprintf("%v%v", *c.EndpiontMountBase, *c.InfoPath), p.getInfoHandler)
+
+	var authCallbackPathFull = fmt.Sprintf("%v%v", *c.EndpiontMountBase, *c.CallbackPath)
+	log.WithField("path", authCallbackPathFull).Debug("setting auth callback path")
+	http.HandleFunc(authCallbackPathFull, p.authCodeCallbackHandler)
+
+	log.Infof("starting goidc-proxy server on port %v", cfg.Server.Port)
+	return http.ListenAndServe(fmt.Sprintf(":%v", cfg.Server.Port), nil)
 }
 
 // ProtectedPathHandler is an http handler supplied by the GoidcProxyServer to handle
 // a protected path that must be behind an oidc auth flow.
-func (p *GoidcServer) ProtectedPathHandler(w http.ResponseWriter, r *http.Request) {
+func (p *GoidcServer) protectedPathHandler(w http.ResponseWriter, r *http.Request) {
+
+	// when no session management is enabled, always redirect to auth server
+	// if the auth server has session handling, it will quietly redirect back
+	// to auth callback; else the user will see a login screen at every request
+	if p.sessionStore == nil {
+		p.redirectToAuthServer(w, r)
+		return
+	}
 
 	// read cookie value
 	token, err := p.cookieManager.GetSessionToken(r)
@@ -89,6 +133,8 @@ func (p *GoidcServer) ProtectedPathHandler(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
+	_ = token
+
 	// retrieve session from session store
 	sess, err := p.sessionStore.GetSession(*token)
 	if err != nil {
@@ -96,22 +142,31 @@ func (p *GoidcServer) ProtectedPathHandler(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	// for authorized requrests we fetch the Exchange object from session
-	// and set a couple of headers for now
-	exch := sess.(Exchange)
-	r.Header.Set("x-goidcify-id-token", exch.IdToken)
-	r.Header.Set("x-goidcify-scope", exch.Scope)
+	_ = sess
+
+	// if we reach this point, the request is authenticated & a valid session
+	// exists.
+	//
+	// for authorized requrests we fetch the `exchange` object from session
+	// and set a couple of head
+	//
+	// exch := sess.(Exchange)
+	// r.Header.Set("x-goidc-access-token", exch.AccessToken)
+	// r.Header.Set("x-goidcify-id-token", exch.IdToken)
+	// r.Header.Set("x-goidcify-scope", exch.Scope)  // ?
+
+	// proxy the request upstream
 	p.rproxy.handle(w, r)
 }
 
-func (p *GoidcServer) UnProtectedPathHandler(w http.ResponseWriter, r *http.Request) {
+func (p *GoidcServer) unProtectedPathHandler(w http.ResponseWriter, r *http.Request) {
 	p.rproxy.handle(w, r)
 }
 
 // AuthCodeCallbackHandler is an http hanlder supplied by the GoidcProxyServer to handle
 // oidc authorization-code/callback endopint; this is endpoint that is called by the OIDC
 // authorization server with the results of the OIDC auth.
-func (p *GoidcServer) AuthCodeCallbackHandler(w http.ResponseWriter, r *http.Request) {
+func (p *GoidcServer) authCodeCallbackHandler(w http.ResponseWriter, r *http.Request) {
 
 	q := r.URL.Query()
 
@@ -170,7 +225,7 @@ func (p *GoidcServer) AuthCodeCallbackHandler(w http.ResponseWriter, r *http.Req
 
 	// TODO: @esiddiqui later we need to use a redirect to the orignal request parameters/headers etc
 	// restore original request components/parameters for the redirect
-	log.Debugf("redirecting to default /\n")
+	// log.Debugf("redirecting to default /\n")
 
 	relativePath := "/" // default redirect after auth is successful
 	// check state cache
@@ -186,7 +241,7 @@ func (p *GoidcServer) AuthCodeCallbackHandler(w http.ResponseWriter, r *http.Req
 
 // GetOidcUserInfoHanlder is the http handler for the GET /<oidcEndpointMount>/userinfo
 // Ex from Okta: https://developer.okta.com/docs/reference/api/oidc/#userinfo
-func (p *GoidcServer) GetOidcUserInfoHanlder(w http.ResponseWriter, r *http.Request) {
+func (p *GoidcServer) getOidcUserInfoHanlder(w http.ResponseWriter, r *http.Request) {
 
 	// read cookie value
 	token, err := p.cookieManager.GetSessionToken(r)
@@ -202,13 +257,22 @@ func (p *GoidcServer) GetOidcUserInfoHanlder(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
+	// TODO: @esiddiqui make this nicer
+	if p.metadata.UserinfoEndpoint == nil {
+		w.Header().Set("content-type", "application/json")
+		_, _ = w.Write([]byte("{ 'error': 'no userinfo_endpoint defined from oidc metadata'}"))
+		return
+	}
+
 	exch := sess.(Exchange)
-	// TODO: @esiddiqui fetch this userinfo endpoint from the /.well-known/openid-configuration
-	userProfileUrl := fmt.Sprintf("%v%v", p.metadata.Issuer, p.cfg.Oidc.UserInfoPath) //TODO: @esiddiqui check if this is portable across auth servers
+	userProfileUrl := *p.metadata.UserinfoEndpoint
+
 	req, _ := http.NewRequest("GET", userProfileUrl, bytes.NewReader([]byte("")))
+	// set request header
 	h := req.Header
 	h.Add("Authorization", fmt.Sprintf("Bearer %v", exch.AccessToken))
 	h.Add("Accept", "application/json")
+
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
@@ -227,7 +291,7 @@ func (p *GoidcServer) GetOidcUserInfoHanlder(w http.ResponseWriter, r *http.Requ
 
 // GetOidcSessionHanlder is the http handler for the GET /<oidcEndpointMount>/userinfo
 // Ex from Okta: https://developer.okta.com/docs/reference/api/oidc/#userinfo
-func (p *GoidcServer) GetOidcSessionHanlder(w http.ResponseWriter, r *http.Request) {
+func (p *GoidcServer) getOidcSessionHanlder(w http.ResponseWriter, r *http.Request) {
 
 	// read cookie value
 	token, err := p.cookieManager.GetSessionToken(r)
@@ -249,7 +313,7 @@ func (p *GoidcServer) GetOidcSessionHanlder(w http.ResponseWriter, r *http.Reque
 }
 
 // GetInfoHandler is an http hanlder supplied by the GoidcProxyServer for the GET /<oidcEndpointMount>/info
-func (p *GoidcServer) GetInfoHandler(w http.ResponseWriter, r *http.Request) {
+func (p *GoidcServer) getInfoHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("content-type", "application/json")
 	infoMap := make(map[string]any)
 	infoMap["version"] = "dev"
@@ -273,26 +337,88 @@ func (p *GoidcServer) redirectToAuthServer(w http.ResponseWriter, r *http.Reques
 	redirectUri := p.getRedirectUri(r)
 	log.Debugf("redirection uri: %v", redirectUri)
 
+	// set reponse header values
 	w.Header().Add("Cache-Control", "no-cache")
-	q := r.URL.Query()
-	q.Add("client_id", p.cfg.Oidc.ClientId)
-	q.Add("response_type", "code")
-	q.Add("response_mode", "query")
+
+	// set query string parameters
 	scopesString := "oidc"
 	if len(p.cfg.Oidc.Scopes) > 0 {
 		scopesString = strings.Join(p.cfg.Oidc.Scopes, " ")
 	}
+	q := r.URL.Query()
+	q.Add("client_id", p.cfg.Oidc.ClientId)
+	q.Add("response_type", "code")
+	q.Add("response_mode", "query")
 	q.Add("scope", scopesString)
 	q.Add("redirect_uri", redirectUri)
 	q.Add("state", state)
 	q.Add("prompt", "login") // this is to force login screen even when authserver session is still valid (okta specific)
 
 	authRedirectEndppoint := fmt.Sprintf("%v?%v", p.metadata.AuthorizationEndpoint, q.Encode()) //fmt.Sprintf("%v/v1/authorize?", p.cfg.Oidc.IssuerUrl) + q.Encode()
-	fmt.Printf("forwarding request to: %v\n", authRedirectEndppoint)
+	log.Debugf("creating refirect required for: %v", authRedirectEndppoint)
 
 	// TODO: @esiddiqui need to convert this to cache impl
 	p.requestCache[state] = r // save reference to orignal request
 	http.Redirect(w, r, authRedirectEndppoint, http.StatusTemporaryRedirect)
+}
+
+// ExchangeCode uses the auth "code" & exchanges it for a access_token & id_token
+// from the auth servers token_endpoint
+func (p *GoidcServer) exchangeCode(code string, r *http.Request) (*Exchange, error) {
+
+	// create auth header by base64(client_id:client_secret)
+	clientId := p.cfg.Oidc.ClientId
+	clientSecret := p.cfg.Oidc.ClientSecret
+	basicAuthCredentials := base64.StdEncoding.EncodeToString(
+		[]byte(clientId + ":" + clientSecret))
+
+	redirectUri := p.getRedirectUri(r)
+	log.Debugf("redirect uri: %v", redirectUri)
+	// q.Set("redirect_uri", redirectUri)
+
+	// set form data
+	data := url.Values{}
+	data.Set("grant_type", "authorization_code") // grant type
+	data.Set("code", code)                       // auth code
+	data.Set("client_id", clientId)              // clientID // linkedin requires this...
+	data.Set("client_secret", clientSecret)      // clientSecret // linkedin required this...
+	data.Set("redirect_uri", redirectUri)        // redirect uri set to oidc application
+
+	url := p.metadata.TokenEndpoint
+	log.Debugf("auth code exchange url %v", url)
+	req, _ := http.NewRequest("POST", url, strings.NewReader(data.Encode()))
+
+	// set headers
+	h := req.Header
+	h.Add("Authorization", fmt.Sprintf("Basic %v", basicAuthCredentials))
+	h.Add("Accept", "application/json")
+	h.Add("User-Agent", "goidc-proxy")
+	h.Add("Content-Type", "application/x-www-form-urlencoded")
+	// h.Add("Connection", "close")
+	// h.Add("Content-Length", "0")
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	log.Debug(string(body))
+
+	defer resp.Body.Close()
+	var exchange Exchange
+	_ = json.Unmarshal(body, &exchange)
+
+	// TODO: @esiddiqui need to clear this out after some testings...
+	// we'll use this to keep an eye on various id endpoint responses
+	// to see if we do need to add any more fields to the exchange.
+	exchange.Base = make(map[string]any)
+	exchange.Base["raw"] = string(body)
+	return &exchange, nil
 }
 
 // getRedirectUri builds & returns the OIDC redirctUri to use
@@ -310,67 +436,4 @@ func (p *GoidcServer) getRedirectUri(r *http.Request) string {
 	redirectUri := fmt.Sprintf("%v%v%v", baseUri, goidcMount, goidcCallbackPath) // baseUri ^^ + /<oidcMount> + /<callbackPath>
 	log.Infof(redirectUri)
 	return redirectUri
-}
-
-// ExchangeCode uses the auth "code" & exchange it for a access_token & id_token
-// from the auth server token ()`v1/token` endpoint
-func (p *GoidcServer) exchangeCode(code string, r *http.Request) (*Exchange, error) {
-
-	// create header for
-	clientId := p.cfg.Oidc.ClientId
-	clientSecret := p.cfg.Oidc.ClientSecret
-	basicAuthCredentials := base64.StdEncoding.EncodeToString(
-		[]byte(clientId + ":" + clientSecret))
-
-	// q := r.URL.Query()
-	// q.Set("grant_type", "authorization_code")
-	// q.Set("code", code)
-	redirectUri := p.getRedirectUri(r)
-	log.Debugf("redirection uri: %v", redirectUri)
-	// q.Set("redirect_uri", redirectUri)
-
-	// set form data
-	data := url.Values{}
-	data.Set("grant_type", "authorization_code")
-	data.Set("code", code)
-	data.Set("redirect_uri", redirectUri)
-
-	// TODO: @esiddiqui - confirm /v1/token is correctly specified for the Auth Server
-	// url := fmt.Sprintf("%v?%v", p.metadata.TokenEndpoint, q.Encode()) //p.cfg.Oidc.IssuerUrl + "/v1/token?" + q.Encode()
-
-	url := fmt.Sprintf("%v", p.metadata.TokenEndpoint) //p.cfg.Oidc.IssuerUrl + "/v1/token?" + q.Encode()
-	log.Infof("auth code exchange url %v", url)
-	req, _ := http.NewRequest("POST", url, strings.NewReader(data.Encode()))
-	// req, _ := http.NewRequest("POST", url, bytes.NewReader([]byte("")))
-
-	// set headers
-	h := req.Header
-	h.Add("Authorization", fmt.Sprintf("Basic %v", basicAuthCredentials))
-	h.Add("Accept", "application/json")
-	h.Add("User-Agent", "goidc-proxy")
-	h.Add("Content-Type", "application/x-www-form-urlencoded")
-	// h.Add("Connection", "close")
-	// h.Add("Content-Length", "0")
-
-	// q := req.URL.Query()
-	// q.Set("grant_type", "authorization_code")
-	// q.Set("code", code)
-	// redirectUri := p.getRedirectUri(r)
-	// log.Debugf("redirection uri: %v", redirectUri)
-	// q.Set("redirect_uri", redirectUri)
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	defer resp.Body.Close()
-	var exchange Exchange
-	_ = json.Unmarshal(body, &exchange)
-	return &exchange, nil
 }

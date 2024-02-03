@@ -11,6 +11,7 @@ type GoidcMetadata struct {
 	Issuer                                    string   `json:"issuer" yaml:"issuer"`
 	AuthorizationEndpoint                     string   `json:"authorization_endpoint" yaml:"authorization_endpoint"`
 	TokenEndpoint                             string   `json:"token_endpoint" yaml:"token_endpoint"`
+	UserinfoEndpoint                          *string  `json:"userinfo_endpoint" yaml:"userinfo_endpoint"`
 	RegistrationEndpoint                      string   `json:"regisration_endpoint" yaml:"regisration_endpoint"`
 	JwksUri                                   string   `json:"jwks_uri" yaml:"jwks_uri"`
 	ResponseTypesSupported                    []string `json:"response_types_supported" yaml:"response_types_supported"`
