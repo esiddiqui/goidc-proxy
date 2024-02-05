@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/esiddiqui/goidc-proxy/config"
 	_ "github.com/esiddiqui/goidc-proxy/config"
@@ -41,16 +42,14 @@ func StartGoidcProxyServer(cfg *config.GoidcConfig) error {
 	}
 
 	// TODO: @esiddiqui convert this to a better session handler...
-	log.Info("Initializing session provider")
 	var sess SessionStore
-	if cfg.Server.Session.Type == config.SessionTypeNone {
-		log.WithField("Status", "Disabled").Warnf("session management")
-	} else if cfg.Server.Session.Type == config.SessionTypeMemory {
-		log.WithField("Status", "Memory").Infof("session management")
+	if cfg.Server.Session.Type == config.SessionTypeMemory {
+		log.WithField("type", "memory").Infof("initializing session provider")
 		sess = NewInMemorySessionStore()
 	} else {
-		log.WithField("Status", "Disabled").Infof("session management")
+		log.WithField("type", "redis").Infof("initializing session provider")
 		log.Warn("redis is currently not supported as a session store")
+		return errors.Errorf("%v not supported for session storage", cfg.Server.Session.Type)
 	}
 
 	// initializing state request cache;
@@ -66,7 +65,7 @@ func StartGoidcProxyServer(cfg *config.GoidcConfig) error {
 	// configure oidc
 	metadata := cfg.Oidc.Metadata
 	if cfg.Oidc.Metadata == nil {
-		log.Infof("loading metadata from metadataUrl %v", cfg.Oidc.MetadataUrl)
+		log.WithField("Url", cfg.Oidc.MetadataUrl).Info("loading oauth2.0/oidc metadata")
 		metadata, err = config.NewFromMetadataUrl(cfg.Oidc.MetadataUrl)
 		if err != nil {
 			return err
@@ -110,7 +109,7 @@ func (p *GoidcServer) startHttpServer() error {
 	log.WithField("path", authCallbackPathFull).Debug("setting auth callback path")
 	http.HandleFunc(authCallbackPathFull, p.authCodeCallbackHandler)
 
-	log.Infof("starting goidc-proxy server on port %v", cfg.Server.Port)
+	log.WithField("port", cfg.Server.Port).Info("starting goidc-proxy server")
 	return http.ListenAndServe(fmt.Sprintf(":%v", cfg.Server.Port), nil)
 }
 
@@ -193,24 +192,29 @@ func (p *GoidcServer) authCodeCallbackHandler(w http.ResponseWriter, r *http.Req
 	}
 
 	log.WithFields(log.Fields{
-		"State":    state,
-		"AuthCode": authCode,
+		"state":    state,
+		"authCode": authCode,
 	}).Info("Good message returned from auth server")
 
 	// exchange auth_code for tokens (auth token, id token)
-	exchange, err := p.exchangeCode(authCode, r)
+	cachedObj, err := p.exchangeCode(authCode, r)
+	exchange := cachedObj.Value
 	if err != nil || exchange.Error != "" {
-		log.Error("error while exchange auth code for tokens")
-		log.Errorf("error type: %v", exchange.Error)
-		log.Errorf("error description: %v", exchange.ErrorDescription)
+		log.WithField("status", "error").Error("exhanged auth_code for access_token")
+		log.WithField("type", exchange.Error).Errorf("error occurred")
+		log.WithField("description", exchange.ErrorDescription).Errorf("error occurred")
+		log.WithField("uri", exchange.ErrorUri).Errorf("error occurred")
 		http.Error(w, exchange.ErrorDescription, http.StatusInternalServerError)
 		return
 	}
 
+	log.WithField("status", "success").Debug("exhanged auth_code for access_token")
+
 	// create new session for this request
-	sessionToken := NewSessionToken() // <--- why, when we can use state?
-	log.Debugf("new session being created with: %v", sessionToken)
-	err = p.sessionStore.CreateNewSession(sessionToken, *exchange)
+	// TODO: @esiddiqui, why create a new session_token when we can use state?
+	sessionToken := NewSessionToken()
+	log.WithField("session_token", sessionToken).Debugf("new session created")
+	err = p.sessionStore.CreateNewSession(sessionToken, cachedObj)
 	if err != nil {
 		http.Error(w, "error creating a new session", http.StatusInternalServerError)
 		return
@@ -218,10 +222,15 @@ func (p *GoidcServer) authCodeCallbackHandler(w http.ResponseWriter, r *http.Req
 
 	// set session token in cookie
 	// align cookie max-age with the tokens' expiry
-	p.cookieManager.SetCookie(w, sessionToken, exchange.ExpiresIn)
-	log.Debugf("session cookied set %v, expiry is %v\n", sessionToken, exchange.ExpiresIn)
-	log.Debugf("access_token: %v\n", exchange.AccessToken)
-	log.Debugf("id_token: %v\n", exchange.IdToken)
+	expiry := int(-1)
+	if exchange.ExpiresIn != nil {
+		expiry = *exchange.ExpiresIn
+	}
+
+	p.cookieManager.SetCookie(w, sessionToken, expiry)
+	log.WithField("expiry", exchange.ExpiresIn).Debugf("session cookied set")
+	log.WithField("access_token", exchange.AccessToken).Debugf("access_token received")
+	log.WithField("id_token", exchange.IdToken).Debugf("id_token received")
 
 	// TODO: @esiddiqui later we need to use a redirect to the orignal request parameters/headers etc
 	// restore original request components/parameters for the redirect
@@ -236,6 +245,7 @@ func (p *GoidcServer) authCodeCallbackHandler(w http.ResponseWriter, r *http.Req
 		// remove this key
 		delete(p.requestCache, state)
 	}
+
 	http.Redirect(w, r, relativePath, http.StatusFound)
 }
 
@@ -264,7 +274,9 @@ func (p *GoidcServer) getOidcUserInfoHanlder(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	exch := sess.(Exchange)
+	cachecObj := sess.(*CachedObject[TokenResponse])
+	exch := cachecObj.Value
+
 	userProfileUrl := *p.metadata.UserinfoEndpoint
 
 	req, _ := http.NewRequest("GET", userProfileUrl, bytes.NewReader([]byte("")))
@@ -363,8 +375,8 @@ func (p *GoidcServer) redirectToAuthServer(w http.ResponseWriter, r *http.Reques
 }
 
 // ExchangeCode uses the auth "code" & exchanges it for a access_token & id_token
-// from the auth servers token_endpoint
-func (p *GoidcServer) exchangeCode(code string, r *http.Request) (*Exchange, error) {
+// from the auth servers token_endpoint.
+func (p *GoidcServer) exchangeCode(code string, r *http.Request) (*CachedObject[TokenResponse], error) {
 
 	// create auth header by base64(client_id:client_secret)
 	clientId := p.cfg.Oidc.ClientId
@@ -410,15 +422,25 @@ func (p *GoidcServer) exchangeCode(code string, r *http.Request) (*Exchange, err
 	log.Debug(string(body))
 
 	defer resp.Body.Close()
-	var exchange Exchange
-	_ = json.Unmarshal(body, &exchange)
+
+	var cachedObj CachedObject[TokenResponse]
+	var token TokenResponse
+	_ = json.Unmarshal(body, &token)
+
+	cachedObj.ExpiresAt = time.Now().Add(100 * 365 * 24 * time.Hour) // 100 years;
+	if token.ExpiresIn != nil {
+		secs := *token.ExpiresIn
+		expiresAt := time.Now().Add(time.Second * time.Duration(secs))
+		cachedObj.ExpiresAt = expiresAt
+	}
+	cachedObj.Value = token
 
 	// TODO: @esiddiqui need to clear this out after some testings...
 	// we'll use this to keep an eye on various id endpoint responses
 	// to see if we do need to add any more fields to the exchange.
-	exchange.Base = make(map[string]any)
-	exchange.Base["raw"] = string(body)
-	return &exchange, nil
+	// cachedObj. = make(map[string]any)
+	cachedObj.Raw = string(body)
+	return &cachedObj, nil
 }
 
 // getRedirectUri builds & returns the OIDC redirctUri to use

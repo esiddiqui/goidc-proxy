@@ -22,7 +22,6 @@ type CookieConfig struct {
 type SessionType string
 
 const (
-	SessionTypeNone   SessionType = "none"
 	SessionTypeMemory SessionType = "memory"
 	SessionTypeRedis  SessionType = "redis"
 )

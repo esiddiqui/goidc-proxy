@@ -24,7 +24,12 @@ func NewGoidcReverseProxy(cfg *config.GoidcConfig) *GoidcReverseProxy {
 		Rewrite: func(r *httputil.ProxyRequest) {
 			req := r.In
 			route := findRouteForPath(cfg.Routes, req.URL.Path)
-			log.Debugf("route %v (%v) matches requeset with path %v", route.Prefix, route.AuthRequired, req.URL.Path)
+			log.WithFields(log.Fields{
+				"incoming":     req.URL.Path,
+				"routePrefix":  route.Prefix,
+				"authRequired": route.AuthRequired,
+			}).Debugf("proxying request")
+
 			r.SetURL(route.ProxyUrl)
 			r.Out.Host = route.ProxyUrl.Host
 
@@ -44,7 +49,13 @@ func NewGoidcReverseProxy(cfg *config.GoidcConfig) *GoidcReverseProxy {
 					strippedOutPath = fmt.Sprintf("/%v", strippedOutPath)
 				}
 				r.Out.URL.Path = fmt.Sprintf("%v%v", strippedTargetPathPrefix, strippedOutPath) // set the outgoing path
-				log.Debugf("requested path: %v, upstream built: %v, upstream final: %v%v", origRequestedPath, origTargetPath, r.Out.Host, strippedOutPath)
+
+				log.WithFields(log.Fields{
+					"origRequestedPath": origRequestedPath,
+					"origTargetPath":    origTargetPath,
+					"r.out.host":        r.Out.Host,
+					"strippedOutPath":   strippedOutPath,
+				}).Debugf("proxying request after stripping Prefix")
 			}
 			r.SetXForwarded() //set x-forwarded* headers..
 		},

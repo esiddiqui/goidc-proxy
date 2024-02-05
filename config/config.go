@@ -100,12 +100,12 @@ func loadFromFile(path string) (*GoidcConfig, error) {
 func overrideFromEnv(env EnvConfig, yaml *GoidcConfig) {
 
 	if env.ClientId != "" {
-		log.Debug("the value of client_id is being overridden from env")
+		log.WithField("source", "environment").Debug("reading client_id")
 		yaml.Oidc.ClientId = env.ClientId
 	}
 
 	if env.ClientSecret != "" {
-		log.Debug("the value of client_secret is being overridden from env")
+		log.WithField("source", "environment").Debug("reading client_secret")
 		yaml.Oidc.ClientSecret = env.ClientSecret
 	}
 
