@@ -18,7 +18,8 @@ type GoidcReverseProxy struct {
 	config *config.GoidcConfig
 }
 
-// NewGoidcReverseProxy create & returns a GoidcReverseProxy
+// NewGoidcReverseProxy create & returns a GoidcReverseProxy using the
+// rules defined in the goidc config
 func NewGoidcReverseProxy(cfg *config.GoidcConfig) *GoidcReverseProxy {
 	p := &httputil.ReverseProxy{
 		Rewrite: func(r *httputil.ProxyRequest) {
@@ -69,15 +70,22 @@ func NewGoidcReverseProxy(cfg *config.GoidcConfig) *GoidcReverseProxy {
 	}
 }
 
-// handle supplies an http handler function to proxy a request using the reverse proxy configuration
-func (p GoidcReverseProxy) handle(w http.ResponseWriter, r *http.Request) {
+// handlerFunc returns the reverseProxy's serveHTTP method so you can use the
+// GoidcReverseProxy as an http.HandlerFunc
+func (p *GoidcReverseProxy) handlerFunc() func(http.ResponseWriter, *http.Request) {
+	return p.proxy.ServeHTTP
+}
+
+// ServeHTTP exposes the underlying httpUtil.ReverseProxy's ServeHTTP method
+// so the GoidcReverseProxy can be used directly as an http.Handler
+func (p *GoidcReverseProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	p.proxy.ServeHTTP(w, r)
 }
 
 // modifyResponse modifies the response for all proxied requests, before
 // the resonse is sent back to the clients.
 func modifyResponse(r *http.Response) error {
-	r.Header.Set("sever", "goidc-proxy v0.1")
+	r.Header.Set("server", "goidc-proxy v0.1")
 	return nil
 }
 

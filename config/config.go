@@ -14,6 +14,8 @@ var (
 	defaultSessionPath      string = "/session"
 	defaultUserInfoPath     string = "/userinfo"
 	defaultInfoPath         string = "/info"
+
+	defaultSessionCookieName string = "goidcsessionid"
 )
 
 func LoadConfig(path string) *GoidcConfig {
@@ -34,6 +36,10 @@ func LoadConfig(path string) *GoidcConfig {
 
 // set defaults
 func setDefaults(cfg *GoidcConfig) {
+
+	if cfg.Server.Cookie.Name == "" {
+		cfg.Server.Cookie.Name = defaultSessionCookieName
+	}
 
 	oidc := &cfg.Oidc
 

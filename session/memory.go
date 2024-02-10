@@ -1,4 +1,4 @@
-package oidc
+package session
 
 import (
 	"fmt"
@@ -10,7 +10,7 @@ type InMemorySessionStore struct {
 	sessions map[string]any
 }
 
-func NewInMemorySessionStore() SessionStore {
+func NewInMemorySessionStore() Store {
 	return &InMemorySessionStore{
 		sessions: make(map[string]any),
 	}
@@ -22,10 +22,10 @@ func (m *InMemorySessionStore) All() map[string]any {
 }
 
 // CreateNewSession creates a new session for the supplied key & value
-func (m *InMemorySessionStore) CreateNewSession(key string, data any) error {
+func (m *InMemorySessionStore) SetSession(key string, value any) error {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
-	m.sessions[key] = data
+	m.sessions[key] = value
 	return nil
 }
 

@@ -2,18 +2,7 @@ package oidc
 
 import (
 	"net/http"
-	"time"
 )
-
-type Base map[string]any
-
-type CachedObject[T any] struct {
-	// Base          `json:"base"`
-	Raw   string `json:"raw"`
-	Value T      `json:"val"`
-	// TokenResponse TokenResponse `json:"token"`
-	ExpiresAt time.Time `json:"expiresOn"`
-}
 
 // TokenResponse respresents the payload for oidc token exchange message
 // https://openid.net/specs/openid-connect-basic-1_0.html Section 2.1.6.2

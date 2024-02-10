@@ -12,11 +12,19 @@ type Route struct {
 	ProxyUrl     *url.URL `yaml:"-"`
 }
 
+type CookieAgePolicy string
+
+const (
+	AgePolicySupplied CookieAgePolicy = "supplied"
+	AgePolicyAligned  CookieAgePolicy = "aligned"
+)
+
 type CookieConfig struct {
-	Name    string `yaml:"name"`
-	Session bool   `yaml:"session"`
-	Ttl     string `yaml:"ttl"`
-	Secure  bool   `yaml:"secure"`
+	Name       string `yaml:"name"`
+	AgeSeconds int    `yaml:"ageSeconds"`
+	Secure     bool   `yaml:"secure"`
+	Session    bool   `yaml:"session"` // TODO check & remove
+	Ttl        string `yaml:"ttl"`     // TODO check & remove
 }
 
 type SessionType string
@@ -26,10 +34,15 @@ const (
 	SessionTypeRedis  SessionType = "redis"
 )
 
-type SessionConfig struct {
+type StoreConfig struct {
 	Type SessionType `yaml:"type"`
 	Host string      `yaml:"host"`
 	Port int32       `yaml:"port"`
+}
+
+type SessionConfig struct {
+	Store  StoreConfig  `yaml:"store"`
+	Cookie CookieConfig `yaml:"cookie"`
 }
 
 type ServerConfig struct {
@@ -54,7 +67,8 @@ type OidConfig struct {
 }
 
 type GoidcConfig struct {
-	Server ServerConfig `yaml:"server"`
-	Oidc   OidConfig    `yaml:"oidc"`
-	Routes []Route      `yaml:"routes"`
+	Server  ServerConfig  `yaml:"server"`
+	Session SessionConfig `yaml:"session"`
+	Oidc    OidConfig     `yaml:"oidc"`
+	Routes  []Route       `yaml:"routes"`
 }
