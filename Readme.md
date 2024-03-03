@@ -121,3 +121,12 @@ Environment variables can override most of the configuration supplied via yaml p
 |GOIDC_CLIENT_ID|  | OIDC application client ID for authorization-code flow |
 |GOIDC_CLIENT_SECRET|  | OIDC application client secret for authorization-code flow |
 
+
+
+## Specifications, references & materials
+
+[The OAuth 2.0 Authorization Framework](https://datatracker.ietf.org/doc/html/rfc6749)
+
+[OAuth 2.0 Authorization Server Metdata](https://datatracker.ietf.org/doc/html/rfc8414)
+
+[OpenID Connect Basic Client Implementer's Guide 1.0](https://openid.net/specs/openid-connect-core-1_0.html)

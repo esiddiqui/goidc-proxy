@@ -18,20 +18,22 @@ var (
 	defaultSessionCookieName string = "goidcsessionid"
 )
 
+// LoadConfig reads the oidc config from the supplied file
 func LoadConfig(path string) *GoidcConfig {
 
 	log.WithField("source", path).Info("loading config")
-	yaml, err := loadFromFile(path)
+	cfg, err := loadFromFile(path)
 	if err != nil {
 		panic(err)
 	}
 
-	setDefaults(yaml)
+	// set any defaults
+	setDefaults(cfg)
 
 	log.WithField("srouce", "environment").Debug("loading config")
 	env := loadFromEnv()
-	overrideFromEnv(env, yaml)
-	return yaml
+	cfg.overrideFromEnv(env)
+	return cfg
 }
 
 // set defaults
@@ -99,20 +101,4 @@ func loadFromFile(path string) (*GoidcConfig, error) {
 	cfg.Routes = routes
 
 	return &cfg, nil
-}
-
-// overrideFromEnv override GoidcConfig from env
-// env values if set will always override the values from yaml config
-func overrideFromEnv(env EnvConfig, yaml *GoidcConfig) {
-
-	if env.ClientId != "" {
-		log.WithField("source", "environment").Debug("reading client_id")
-		yaml.Oidc.ClientId = env.ClientId
-	}
-
-	if env.ClientSecret != "" {
-		log.WithField("source", "environment").Debug("reading client_secret")
-		yaml.Oidc.ClientSecret = env.ClientSecret
-	}
-
 }

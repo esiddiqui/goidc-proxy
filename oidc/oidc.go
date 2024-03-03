@@ -14,6 +14,7 @@ import (
 	"github.com/esiddiqui/goidc-proxy/config"
 	_ "github.com/esiddiqui/goidc-proxy/config"
 	"github.com/esiddiqui/goidc-proxy/session"
+	"github.com/esiddiqui/goidc-proxy/types"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )
@@ -27,7 +28,7 @@ const (
 type GoidcServer struct {
 	cfg        *config.GoidcConfig
 	rproxy     *GoidcReverseProxy
-	metadata   *config.GoidcMetadata
+	metadata   *types.AuthServerMetadata
 	sessionMgr session.Manager
 	//requestCache StateRequestCache
 }
@@ -163,7 +164,7 @@ func (p *GoidcServer) authCodeCallbackHandler(w http.ResponseWriter, r *http.Req
 
 	// exchange auth_code for tokens (auth token, id token)
 	cachedObj, err := p.exchangeCode(authCode, r)
-	exchange := cachedObj.Value.(TokenResponse)
+	exchange := cachedObj.Value.(types.AccessTokenResponse)
 	if err != nil || exchange.Error != "" {
 		log.WithField("status", "error").Error("exhanged auth_code for access_token")
 		log.WithField("type", exchange.Error).Errorf("error occurred")
@@ -248,7 +249,7 @@ func (p *GoidcServer) getOidcUserInfoHanlder(w http.ResponseWriter, r *http.Requ
 	}
 
 	val := sw.SessionObject.Value
-	exch := val.(TokenResponse)
+	exch := val.(types.AccessTokenResponse)
 	userProfileUrl := *p.metadata.UserinfoEndpoint
 
 	req, _ := http.NewRequest("GET", userProfileUrl, bytes.NewReader([]byte("")))
@@ -394,12 +395,10 @@ func (p *GoidcServer) exchangeCode(code string, r *http.Request) (*session.Objec
 		return nil, err
 	}
 
-	// log.Debug(string(body))
-
 	defer resp.Body.Close()
 
 	var cachedObj session.Object
-	var token TokenResponse
+	var token types.AccessTokenResponse
 	_ = json.Unmarshal(body, &token)
 
 	cachedObj.ExpiresAt = time.Now().Add(100 * 365 * 24 * time.Hour) // 100 years;
