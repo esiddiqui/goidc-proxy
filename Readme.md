@@ -1,18 +1,19 @@
 
 
-`goidc-proxy` is an http proxy server that enables OIDC auth for http web-applications & microservices. The proxy sits between the http client (e.g a browser) & the upstreams (webapp frontends, micro-services etc) and enforces that the requests are authenticated; that is, they have an active `goidc-proxy` session, that holds valid OIDC credentials (an OIDC access_token, id_token etc.). Only then, the requests are proxied to the configured upstream. Only one authorization server can be configured per instance. However, multiple backends can be proxied to; thus essentially enabling a Single-SignOn (SSO) solution. Currently `goidc-proxy` enforces session manangement. As a benefit of that, the upstream web application do not need to worry about it. 
+`goidc-proxy` is an http proxy server that instantly enables authorization and an identity layer for HTTP web applications or microservices via. OAuth 2.0 framework & OpenID Connect.
+
+It sits between the http client or a user agent (e.g a browser) & the up-stream (e.g webapp frontends, microservices etc) and ensures all requests to protected resources are authorized; that is, they have an active `goidc-proxy` session which in turn holds valid OAuth/OIDC credentials (an OAuth access_token, an OIDC id_token etc.). After that the requests are proxied to the configured upstreams. 
+
+Presently only one authorization server can be configured per `goidc-proxy` runtime. However, multiple backends can be proxied to; thus essentially enabling a Single-SignOn (SSO) solution. `goidc-proxy` also implements basic http session handling & relies on it for identifying request authetnication status. for As a benefit of that, the upstream web application does not need to worry about session handling at all. 
 
 A `/<oidc_mount_pt>/userinfo` endpoint is also exposed by the proxy for the client or the upstream services to fetch authorization information. This requires the authorization server being used also exposes an OpenID `/userinfo` endpoint, and corresponding `scopes` were requested during OIDC auth flow for it to return the required information. Using that access_token for each session, the `goidc_proxy` can call the `/userinfo` endpoint & return the response so it can be consumed by the client or the upstream.
 
-## Supported OAuth flows:
-Currently only the authorization-code flow is supported. Once the flow is successful, OIDC credentials are stored in a session which is tracked using a cookie. The validity of the cookie is synced with the expiry set on the OIDC access_token; After expiry the session is cleared & any new requests are sent to complete the auth flow with the authorization server.
+## Supported OAuth Grants:
+Currently, only the authorization-code grant flow is supported. Once the flow is successful, OIDC credentials are stored in a session which is tracked using a cookie. The validity of the cookie is synced with the expiry set on the OIDC access_token; After expiry the session is cleared & any new requests are passed through the authorization flow with the authorization server.
 
-In addition some basic request rewriting can be done using the `stripPrefix` setting for each route.  For more details on these settings check the Proxy configuration section below.
-
-The `goidc-proxy` can also proxy requests to multiple upstream targets based on rules defined in the configuraiton. 
+In addition some basic request rewriting can be done using the `stripPrefix` setting for each route.  For more details on these settings check the Proxy configuration section below. The `goidc-proxy` can also proxy requests to multiple upstream targets based on rules defined in the configuraiton. 
 
 The configuration for the oidc authorization server, session & proxy server itself are pretty straightfoward & self-explanatory. See Proxy Configuration section for more details.
-
 
 The diagram below shows the flow of http traffic (request/response) via the `goidc-proxy` to upstream servers & back. At present, the `goidc-proxy` does not terminate TLS, so as a best-practice it must never to be exposed to the clients on internet directly. There must a load-balancer configured that sits between the client & proxy to terminate TLS & simply forward all incoming requests.
 

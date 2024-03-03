@@ -10,21 +10,21 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// GoidcReverseProxy wraps an httputil::ReverseProxy & goidc
-// config to proxy requests to upstreams (targets) based on
-// the config routes defined
+// GoidcReverseProxy uses an httputil.ReverseProxy to proxy requests to
+// upstreams (targets) based on the config routes defined in the goidc config
 type GoidcReverseProxy struct {
-	proxy  *httputil.ReverseProxy
-	config *config.GoidcConfig
+	proxy *httputil.ReverseProxy
+	// config *config.GoidcConfig
+	routes []config.Route
 }
 
 // NewGoidcReverseProxy create & returns a GoidcReverseProxy using the
 // rules defined in the goidc config
-func NewGoidcReverseProxy(cfg *config.GoidcConfig) *GoidcReverseProxy {
+func NewGoidcReverseProxy(routes []config.Route) *GoidcReverseProxy {
 	p := &httputil.ReverseProxy{
 		Rewrite: func(r *httputil.ProxyRequest) {
 			req := r.In
-			route := findRouteForPath(cfg.Routes, req.URL.Path)
+			route := findRouteForPath(routes, req.URL.Path)
 			log.WithFields(log.Fields{
 				"incoming":     req.URL.Path,
 				"routePrefix":  route.Prefix,
@@ -65,7 +65,7 @@ func NewGoidcReverseProxy(cfg *config.GoidcConfig) *GoidcReverseProxy {
 	}
 
 	return &GoidcReverseProxy{
-		config: cfg,
+		routes: routes,
 		proxy:  p,
 	}
 }
@@ -91,7 +91,12 @@ func modifyResponse(r *http.Response) error {
 
 // errorHandler logs errored-out proxied requests
 func errorHandler(w http.ResponseWriter, r *http.Request, err error) {
-	log.Errorf("error while proxing request %v", err.Error())
+	log.WithFields(log.Fields{
+		"err":     err.Error(),
+		"host":    r.Host,
+		"request": r.URL.Path,
+	}).Error("error while proxing request")
+	http.Error(w, err.Error(), http.StatusBadGateway)
 }
 
 // from the supplied routes ([]Route), find the best matching

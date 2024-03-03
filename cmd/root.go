@@ -56,7 +56,7 @@ func getRun(opts *RootOpts) func(*cobra.Command, []string) {
 		cfg := config.LoadConfig(opts.ConfigPath)
 
 		// start goidc proxy server
-		err := oidc.StartGoidcProxyServer(cfg)
+		err := oidc.StartHttpServer(cfg)
 		if err != nil {
 			panic(err)
 		}

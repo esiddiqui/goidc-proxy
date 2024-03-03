@@ -40,12 +40,15 @@ func (c CookieManager) setCookieValue(w http.ResponseWriter, value string, age i
 
 // GetCookieValue returns the value for a cookie name, else error
 func (c CookieManager) getCookieValue(r *http.Request) (*string, error) {
-	cookie, err := r.Cookie(c.Name)
 
-	if errors.Is(err, http.ErrNoCookie) {
-		log.WithField("name", c.Name).Debug("no cookie found")
-	} else {
-		log.WithField("name", c.Name).Debugf("error fetching cookie")
+	cookie, err := r.Cookie(c.Name)
+	if err != nil {
+		if errors.Is(err, http.ErrNoCookie) {
+			log.WithField("name", c.Name).Debug("no cookie found")
+		} else {
+			log.WithField("name", c.Name).Debugf("error fetching cookie")
+		}
+		return nil, err
 	}
 
 	if cookie == nil {
