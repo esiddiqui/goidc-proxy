@@ -4,16 +4,23 @@
 
 It sits between the http client or a user agent (e.g a browser) & the up-stream (e.g webapp frontends, microservices etc) and ensures all requests to protected resources are authorized; that is, they have an active `goidc-proxy` session which in turn holds valid OAuth/OIDC credentials (an OAuth access_token, an OIDC id_token etc.). After that the requests are proxied to the configured upstreams. 
 
-Presently only one authorization server can be configured per `goidc-proxy` runtime. However, multiple backends can be proxied to; thus essentially enabling a Single-SignOn (SSO) solution. `goidc-proxy` also implements basic http session handling & relies on it for identifying request authetnication status. for As a benefit of that, the upstream web application does not need to worry about session handling at all. 
+Presently only one authorization server can be configured per `goidc-proxy` runtime. However, multiple backends can be proxied to; thus essentially enabling a Single-SignOn (SSO) solution. 
 
-A `/<oidc_mount_pt>/userinfo` endpoint is also exposed by the proxy for the client or the upstream services to fetch authorization information. This requires the authorization server being used also exposes an OpenID `/userinfo` endpoint, and corresponding `scopes` were requested during OIDC auth flow for it to return the required information. Using that access_token for each session, the `goidc_proxy` can call the `/userinfo` endpoint & return the response so it can be consumed by the client or the upstream.
+## Session Management
 
-## Supported OAuth Grants:
-Currently, only the authorization-code grant flow is supported. Once the flow is successful, OIDC credentials are stored in a session which is tracked using a cookie. The validity of the cookie is synced with the expiry set on the OIDC access_token; After expiry the session is cleared & any new requests are passed through the authorization flow with the authorization server.
+`goidc-proxy` also implements basic http session handling & relies on it for proxying requests appropriately. The `authentication` status of a request is determined using the session as well. The upstream application does not need to worry about performing session handling of it's own if it can work off the basic session information managed & exposed by the `goidc-proxy`. 
 
-In addition some basic request rewriting can be done using the `stripPrefix` setting for each route.  For more details on these settings check the Proxy configuration section below. The `goidc-proxy` can also proxy requests to multiple upstream targets based on rules defined in the configuraiton. 
 
-The configuration for the oidc authorization server, session & proxy server itself are pretty straightfoward & self-explanatory. See Proxy Configuration section for more details.
+ ## User Info endpoint
+
+A `/<oidc_mount_pt>/userinfo` endpoint is also set up by the `goidc-proxy`, which can be consumed by the user-agent or the upstream service to fetch identity information. This endpoint only works when the authorization server configured also exposes an OpenID `/userinfo` endpoint; as well as the corresponding `scopes` being requested during authorization for it to return the required information.
+
+
+## Supported OAuth Grants
+
+### 1. Authorization Code Grant
+
+Presently only the **Authorization Code Grant** is supported. Once the authorization code flow is successful, the OAuth2.0 & OpenID Connect credentials are stored in the session which is tracked using a cookie. The validity of the cookie is synced with the expiry set on the OIDC access_token; After expiry the session is cleared & any new requests are passed through the authorization flow with the authorization server.
 
 The diagram below shows the flow of http traffic (request/response) via the `goidc-proxy` to upstream servers & back. At present, the `goidc-proxy` does not terminate TLS, so as a best-practice it must never to be exposed to the clients on internet directly. There must a load-balancer configured that sits between the client & proxy to terminate TLS & simply forward all incoming requests.
 
@@ -34,6 +41,25 @@ The diagram below shows the flow of http traffic (request/response) via the `goi
 
 ```
 
+### 2. Client Credentials Grant 
+TODO
+
+### 3. Un-supported Grants
+
+The **Implicit Grant** being not *very* secure & more suited for client-side only applications is not on the roadmap at the moment.
+
+**Resource Owner Password Credentials** may be supported in the future. However, since this requres the resource owner's password to be passed via the OAuth client, it is not a very commonly-used flow; especially with non-trusted OAuth clients.
+
+## Proxy Features
+
+
+### Request rewrites
+
+Some basic request rewriting can be done using the `stripPrefix` setting for each route.  For more details on these settings check the Proxy configuration section below. The `goidc-proxy` can also proxy requests to multiple upstream targets based on rules defined in the configuraiton. 
+
+
+
+
 ## Session
 
 Sessions are stored in an in-memory cache so only a single instance of the proxy can be deployed. 
@@ -43,7 +69,9 @@ Sessions are stored in an in-memory cache so only a single instance of the proxy
 
 ## Proxy Configuration:
 
-The `goidc-proxy` is primarily configured via a yaml file. However, some configuration can be overridden from the environment variables. e.g secrets should not be stored in the yaml, rather supplied at runtime.
+The configuration settings for the authorization server, session & proxy server itself are pretty straightfoward & self-explanatory. 
+
+ßThe `goidc-proxy` is primarily configured via a yaml file. However, some configuration can be overridden from the environment variables. e.g secrets should not be stored in the yaml, rather supplied at runtime.
 
 ### Yaml Configuration:
 
