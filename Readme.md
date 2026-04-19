@@ -159,3 +159,52 @@ Environment variables can override most of the configuration supplied via yaml p
 [OAuth 2.0 Authorization Server Metdata](https://datatracker.ietf.org/doc/html/rfc8414)
 
 [OpenID Connect Basic Client Implementer's Guide 1.0](https://openid.net/specs/openid-connect-core-1_0.html)
+
+---
+
+## Developer Documentation
+
+### Prerequisites
+- Go 1.21 or higher
+- `make` (optional, for using the Makefile)
+- `golangci-lint` (for linting)
+
+### Getting Started
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/esiddiqui/goidc-proxy.git
+   cd goidc-proxy
+   ```
+2. Install dependencies:
+   ```bash
+   make setup
+   ```
+3. Build the project:
+   ```bash
+   make build
+   ```
+
+### Project Structure
+- `cmd/`: CLI entry point (Cobra).
+- `config/`: Configuration loading and parsing.
+- `oidc/`: OIDC logic, HTTP server, and reverse proxy.
+- `session/`: Session management (cookie-based).
+- `types/`: Common types and structs.
+
+### Running in Development
+To run the proxy locally with a custom configuration:
+```bash
+./goidc-proxy --config your-config.yml --log-level debug
+```
+
+### Testing
+Run all tests using the Makefile:
+```bash
+make test
+```
+
+### Linting
+Run the linter to ensure code quality:
+```bash
+make lint
+```
