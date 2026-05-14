@@ -7,6 +7,8 @@ import (
 	"strings"
 
 	"github.com/esiddiqui/goidc-proxy/config"
+	"github.com/esiddiqui/goidc-proxy/session"
+	"github.com/esiddiqui/goidc-proxy/types"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -59,6 +61,16 @@ func NewGoidcReverseProxy(routes []config.Route) *GoidcReverseProxy {
 				}).Debugf("proxying request after stripping Prefix")
 			}
 			r.SetXForwarded() //set x-forwarded* headers..
+
+			// propagate oidc tokens to upstream
+			if sessObj, ok := r.In.Context().Value(session.SessionContextKey).(*session.Object); ok && sessObj != nil {
+				if tokenRes, ok := sessObj.Value.(*types.AccessTokenResponse); ok {
+					r.Out.Header.Set("X-Auth-Access-Token", tokenRes.AccessToken)
+					if tokenRes.IdToken != "" {
+						r.Out.Header.Set("X-Auth-Id-Token", tokenRes.IdToken)
+					}
+				}
+			}
 		},
 		ErrorHandler:   errorHandler,
 		ModifyResponse: modifyResponse,

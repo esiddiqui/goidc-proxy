@@ -1,6 +1,7 @@
 package session
 
 import (
+	"context"
 	"net/http"
 	"time"
 
@@ -159,7 +160,9 @@ func (m Manager) GetSessionWrapperHandler(yesHandler, noHandler http.HandlerFunc
 			return
 		} else {
 			wr_w := NewResponseWriterWithSessionInfo(w, sess)
-			yesHandler(wr_w, r)
+			// add session info to context so it can be used by the proxy
+			ctx := context.WithValue(r.Context(), SessionContextKey, sess)
+			yesHandler(wr_w, r.WithContext(ctx))
 			return
 		}
 	})

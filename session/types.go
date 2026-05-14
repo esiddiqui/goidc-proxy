@@ -23,6 +23,12 @@ type Object struct {
 	ExpiresAt      time.Time    `json:"expiresOn"`
 }
 
+type contextKey string
+
+const (
+	SessionContextKey contextKey = "goidc-session"
+)
+
 type ResponseWriterWithSessionInfo struct {
 	http.ResponseWriter
 	SessionObject *Object // this is the object from session; generic typed for some sanity
