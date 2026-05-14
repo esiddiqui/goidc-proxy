@@ -70,6 +70,10 @@ func setDefaults(cfg *GoidcConfig) {
 		oidc.SessionPath = &defaultSessionPath
 	}
 
+	if oidc.PropagationPolicy == "" {
+		oidc.PropagationPolicy = PropagationPolicyDefault
+	}
+
 }
 
 // loadProxyConfig reads & parses the proxy config from the supplied path

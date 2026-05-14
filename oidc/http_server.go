@@ -57,7 +57,7 @@ func StartHttpServer(cfg *config.GoidcConfig) error {
 		cfg:        cfg,
 		metadata:   metadata,
 		sessionMgr: *session,
-		rproxy:     NewGoidcReverseProxy(cfg.Routes),
+		rproxy:     NewGoidcReverseProxy(cfg.Routes, cfg.Oidc.PropagationPolicy),
 	}
 
 	err = server.startHttpServer()

@@ -16,6 +16,25 @@ Presently only one authorization server can be configured per `goidc-proxy` runt
 A `/<oidc_mount_pt>/userinfo` endpoint is also set up by the `goidc-proxy`, which can be consumed by the user-agent or the upstream service to fetch identity information. This endpoint only works when the authorization server configured also exposes an OpenID `/userinfo` endpoint; as well as the corresponding `scopes` being requested during authorization for it to return the required information.
 
 
+## Identity Propagation
+
+When `goidc-proxy` forwards a request to an upstream service, it injects identity information into the request headers. This allows the upstream service to identify the user and potentially use the access token for further downstream requests.
+
+The following headers are currently injected by default:
+- `X-Auth-Access-Token`: The OAuth 2.0 Access Token received from the IdP.
+- `X-Auth-Id-Token`: The OpenID Connect ID Token (if provided by the IdP).
+
+### AWS ALB Compatibility Mode
+
+`goidc-proxy` can simulate AWS Application Load Balancer (ALB) OIDC headers by setting `oidc.propagationPolicy: aws` in the configuration. This is useful for testing applications designed to run behind an AWS ALB.
+
+In this mode, the following headers are sent:
+- `x-amzn-oidc-accesstoken`: The OIDC access token.
+- `x-amzn-oidc-identity`: The `sub` (subject) claim extracted from the ID token.
+- `x-amzn-oidc-data`: The user claims (currently passes the IdP's ID token).
+
+Additionally, standard `X-Forwarded-For`, `X-Forwarded-Host`, and `X-Forwarded-Proto` headers are set.
+
 ## Supported OAuth Grants
 
 ### 1. Authorization Code Grant
@@ -42,7 +61,7 @@ The diagram below shows the flow of http traffic (request/response) via the `goi
 ```
 
 ### 2. Client Credentials Grant 
-TODO
+(Planned/In-progress)
 
 ### 3. Un-supported Grants
 
@@ -64,7 +83,7 @@ Some basic request rewriting can be done using the `stripPrefix` setting for eac
 
 Sessions are stored in an in-memory cache so only a single instance of the proxy can be deployed. 
 
-**Upcomfing:** In future the sessions would be stored to an out-of-process cache like Redis to allow load-balancing the `goidc-proxy` itself to allow scaling.
+**Upcoming:** In future the sessions would be stored to an out-of-process cache like Redis to allow load-balancing the `goidc-proxy` itself to allow scaling. (Configurable but implementation is pending).
 
 
 ## Proxy Configuration:
@@ -118,6 +137,10 @@ oidc:
    - openid
    - scopeC
    - scopeB
+  # identity propagation policy to use, default | aws. 
+  # default: uses X-Auth-Access-Token and X-Auth-Id-Token
+  # aws: simulates AWS ALB OIDC headers (x-amzn-oidc-*)
+  propagationPolicy: default 
 
 
 # SECTION 3

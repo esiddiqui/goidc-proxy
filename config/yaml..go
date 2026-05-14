@@ -22,6 +22,13 @@ const (
 	AgePolicyAligned  CookieAgePolicy = "aligned"
 )
 
+type PropagationPolicy string
+
+const (
+	PropagationPolicyDefault PropagationPolicy = "default"
+	PropagationPolicyAWS     PropagationPolicy = "aws"
+)
+
 type CookieConfig struct {
 	Name       string `yaml:"name"`
 	AgeSeconds int    `yaml:"ageSeconds"`
@@ -49,9 +56,10 @@ type SessionConfig struct {
 }
 
 type ServerConfig struct {
-	Port    int32         `yaml:"port"`
-	Cookie  CookieConfig  `yaml:"cookie"`
-	Session SessionConfig `yaml:"session"`
+	Port              int32             `yaml:"port"`
+	Cookie            CookieConfig      `yaml:"cookie"`
+	Session           SessionConfig     `yaml:"session"`
+	PropagationPolicy PropagationPolicy `yaml:"propagationPolicy"`
 }
 
 type OidConfig struct {
@@ -67,6 +75,7 @@ type OidConfig struct {
 	InfoPath          *string                   `yaml:"infoPath"`          // sub-path for info path
 	SessionPath       *string                   `yaml:"sessionPath"`       // sub-path for session path
 	Scopes            []string                  `yaml:"scopes"`
+	PropagationPolicy PropagationPolicy         `yaml:"propagationPolicy"`
 }
 
 type GoidcConfig struct {

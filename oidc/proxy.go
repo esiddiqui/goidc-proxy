@@ -9,20 +9,21 @@ import (
 	"github.com/esiddiqui/goidc-proxy/config"
 	"github.com/esiddiqui/goidc-proxy/session"
 	"github.com/esiddiqui/goidc-proxy/types"
+	"github.com/lestrrat-go/jwx/v2/jwt"
 	log "github.com/sirupsen/logrus"
 )
 
 // GoidcReverseProxy uses an httputil.ReverseProxy to proxy requests to
 // upstreams (targets) based on the config routes defined in the goidc config
 type GoidcReverseProxy struct {
-	proxy *httputil.ReverseProxy
-	// config *config.GoidcConfig
-	routes []config.Route
+	proxy             *httputil.ReverseProxy
+	routes            []config.Route
+	propagationPolicy config.PropagationPolicy
 }
 
 // NewGoidcReverseProxy create & returns a GoidcReverseProxy using the
 // rules defined in the goidc config
-func NewGoidcReverseProxy(routes []config.Route) *GoidcReverseProxy {
+func NewGoidcReverseProxy(routes []config.Route, propagationPolicy config.PropagationPolicy) *GoidcReverseProxy {
 	p := &httputil.ReverseProxy{
 		Rewrite: func(r *httputil.ProxyRequest) {
 			req := r.In
@@ -65,9 +66,26 @@ func NewGoidcReverseProxy(routes []config.Route) *GoidcReverseProxy {
 			// propagate oidc tokens to upstream
 			if sessObj, ok := r.In.Context().Value(session.SessionContextKey).(*session.Object); ok && sessObj != nil {
 				if tokenRes, ok := sessObj.Value.(*types.AccessTokenResponse); ok {
-					r.Out.Header.Set("X-Auth-Access-Token", tokenRes.AccessToken)
-					if tokenRes.IdToken != "" {
-						r.Out.Header.Set("X-Auth-Id-Token", tokenRes.IdToken)
+					if propagationPolicy == config.PropagationPolicyAWS {
+						// AWS ALB compatible headers
+						r.Out.Header.Set("x-amzn-oidc-accesstoken", tokenRes.AccessToken)
+
+						// x-amzn-oidc-identity: The subject field (sub) from the user info endpoint
+						// Extracting 'sub' from the IdToken if present
+						if tokenRes.IdToken != "" {
+							if t, err := jwt.Parse([]byte(tokenRes.IdToken), jwt.WithVerify(false)); err == nil {
+								if sub, ok := t.Get("sub"); ok {
+									r.Out.Header.Set("x-amzn-oidc-identity", fmt.Sprintf("%v", sub))
+								}
+							}
+							r.Out.Header.Set("x-amzn-oidc-data", tokenRes.IdToken)
+						}
+					} else {
+						// Default headers
+						r.Out.Header.Set("X-Auth-Access-Token", tokenRes.AccessToken)
+						if tokenRes.IdToken != "" {
+							r.Out.Header.Set("X-Auth-Id-Token", tokenRes.IdToken)
+						}
 					}
 				}
 			}
@@ -77,8 +95,9 @@ func NewGoidcReverseProxy(routes []config.Route) *GoidcReverseProxy {
 	}
 
 	return &GoidcReverseProxy{
-		routes: routes,
-		proxy:  p,
+		routes:            routes,
+		proxy:             p,
+		propagationPolicy: propagationPolicy,
 	}
 }
 
