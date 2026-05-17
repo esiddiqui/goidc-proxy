@@ -1,17 +1,17 @@
 ---
 
-
 server: 
   port: 4040
-  cookie:
-    name: goidcjessionid
-    session: no
-    ttl: 3h  # use go time.Duration literal format 3h, 1h20m30s etc
-    secure: yes
   session:
-    type: memory # memory | redis
-    host: redis.cluster.local # for redis
-    port: 6379 # for redis
+    cookie:
+      name: goidcjessionid
+      session: no
+      ttl: 3h  # use go time.Duration literal format 3h, 1h20m30s etc
+      secure: yes
+    store:
+      type: memory # memory | redis
+      host: redis.cluster.local # for redis
+      port: 6379 # for redis
 
 oidc: 
   clientID: # supplied by env var

@@ -101,12 +101,13 @@ The `goidc-proxy` is configured using a yaml configuration file that is read fro
 # this section defines the proxy server parameters & session management configuration like cookie & session storage
 server: 
   port: 3939 # proxy server listen port
-  cookie:
-    name: goidcjessionid # session cookie name to use
   session:
-    type: memory # type of session storage, memory | redis
-    host: redis.cluster.local # redis host to use for session management
-    port: 6379 # redis port to use for session management
+    cookie:
+      name: goidcjessionid # session cookie name to use
+    store:
+      type: memory # type of session storage, memory | redis
+      host: redis.cluster.local # redis host to use for session management
+      port: 6379 # redis port to use for session management
 
 # SECTION 2
 # this section configure the OIDC related properties. 

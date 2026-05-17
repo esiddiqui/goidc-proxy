@@ -35,7 +35,7 @@ func StartHttpServer(cfg *config.GoidcConfig) error {
 	}
 
 	// initialize session manager
-	session, err := session.NewSessionManager(&cfg.Session)
+	session, err := session.NewSessionManager(&cfg.Server.Session)
 	if err != nil {
 		return err
 	}
