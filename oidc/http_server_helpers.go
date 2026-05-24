@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/esiddiqui/goidc-proxy/config"
 	"github.com/esiddiqui/goidc-proxy/session"
 	"github.com/esiddiqui/goidc-proxy/types"
 	log "github.com/sirupsen/logrus"
@@ -45,22 +46,22 @@ func (p *HttpServer) redirectToAuthServer(w http.ResponseWriter, r *http.Request
 	q.Add("state", state)
 	q.Add("prompt", "login") // TODO @esiddiqui: this is okta specific; used to forece login screen even when authserver side has a valid session
 
-	authRedirectEndppoint := fmt.Sprintf("%v?%v", p.metadata.AuthorizationEndpoint, q.Encode())
-	log.WithField("value", authRedirectEndppoint).Debugf("creating refirect required for: %v", authRedirectEndppoint)
+	authRedirectEndpoint := fmt.Sprintf("%v?%v", p.metadata.AuthorizationEndpoint, q.Encode())
+	log.WithField("value", authRedirectEndpoint).Debugf("creating redirect required for: %v", authRedirectEndpoint)
 
 	// TODO: @esiddiqui need to convert this to cache impl
 	// start a new session
 	sessionObj := session.Object{
-		OrignalRequest: *r,
+		OriginalRequest: *r,
 	}
 
-	// using state value as session token, we cache the orignal request.
+	// using state value as session token, we cache the original request.
 	err := p.sessionMgr.Set(w, state, sessionObj)
 	if err != nil {
 		log.Errorf("error setting session for request %v", state)
 	}
-	//p.requestCache[state] = r // save reference to orignal request
-	http.Redirect(w, r, authRedirectEndppoint, http.StatusTemporaryRedirect)
+	//p.requestCache[state] = r // save reference to original request
+	http.Redirect(w, r, authRedirectEndpoint, http.StatusTemporaryRedirect)
 }
 
 // exchangeCode exchanges the auth code for an access_token/id_token from the auth server
@@ -73,8 +74,6 @@ func (p *HttpServer) exchangeCode(code string, r *http.Request) (*types.AccessTo
 	// create auth header by base64(client_id:client_secret)
 	clientId := p.cfg.Oidc.ClientId
 	clientSecret := p.cfg.Oidc.ClientSecret
-	basicAuthCredentials := base64.StdEncoding.EncodeToString(
-		[]byte(clientId + ":" + clientSecret))
 
 	// redirect uri as configered with the auth server is also required by the token endpoint
 	// although there is no redirection involved in this flow...
@@ -85,22 +84,28 @@ func (p *HttpServer) exchangeCode(code string, r *http.Request) (*types.AccessTo
 	data := url.Values{}
 	data.Set("grant_type", "authorization_code") // TODO grant type (this needs to be configurable?)
 	data.Set("code", code)                       // TODO auth code (this needs to configurable)
-	data.Set("client_id", clientId)              // clientID // linkedin requires this
-	data.Set("client_secret", clientSecret)      // clientSecret // linkedin required this
 	data.Set("redirect_uri", redirectUri)        // redirect uri set to oidc application
+
+	// set headers
+	h := make(http.Header)
+	h.Add("Accept", "application/json")
+	h.Add("User-Agent", "goidc-proxy")
+	h.Add("Content-Type", "application/x-www-form-urlencoded")
+
+	if p.cfg.Oidc.TokenEndpointAuthMethod == config.TokenEndpointAuthMethodClientSecretPost {
+		data.Set("client_id", clientId)
+		data.Set("client_secret", clientSecret)
+	} else {
+		// default to client_secret_basic
+		basicAuthCredentials := base64.StdEncoding.EncodeToString(
+			[]byte(clientId + ":" + clientSecret))
+		h.Add("Authorization", fmt.Sprintf("Basic %v", basicAuthCredentials))
+	}
 
 	url := p.metadata.TokenEndpoint
 	log.Debugf("auth code exchange url %v", url)
 	req, _ := http.NewRequest("POST", url, strings.NewReader(data.Encode()))
-
-	// set headers
-	h := req.Header
-	h.Add("Authorization", fmt.Sprintf("Basic %v", basicAuthCredentials))
-	h.Add("Accept", "application/json")
-	h.Add("User-Agent", "goidc-proxy")
-	h.Add("Content-Type", "application/x-www-form-urlencoded")
-	// h.Add("Connection", "close")
-	// h.Add("Content-Length", "0")
+	req.Header = h
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
@@ -120,7 +125,7 @@ func (p *HttpServer) exchangeCode(code string, r *http.Request) (*types.AccessTo
 	return &token, nil
 }
 
-// getRedirectUri builds & returns the OIDC redirctUri to use
+// getRedirectUri builds & returns the OIDC redirectUri to use
 func (p *HttpServer) getRedirectUri(r *http.Request) string {
 
 	config := p.cfg
@@ -129,7 +134,7 @@ func (p *HttpServer) getRedirectUri(r *http.Request) string {
 		goidcScheme = "https"
 	}
 	goidcHost := r.Host
-	goidcMount := *config.Oidc.EndpiontMountBase
+	goidcMount := *config.Oidc.EndpointMountBase
 	goidcCallbackPath := *config.Oidc.CallbackPath
 	baseUri := fmt.Sprintf("%v://%v", goidcScheme, goidcHost)                    // http://<host-header>:3000
 	redirectUri := fmt.Sprintf("%v%v%v", baseUri, goidcMount, goidcCallbackPath) // baseUri ^^ + /<oidcMount> + /<callbackPath>

@@ -57,6 +57,11 @@ Simulates AWS Application Load Balancer (ALB) OIDC authentication headers:
 - `x-amzn-oidc-identity`: The `sub` claim extracted from the ID token.
 - `x-amzn-oidc-data`: The ID token (simulating user claims JWT).
 
+#### Token Endpoint Authentication
+Supports configurable authentication methods via `oidc.tokenEndpointAuthMethod`:
+- `client_secret_basic` (Default): Sends credentials in the `Authorization` header.
+- `client_secret_post`: Sends credentials in the POST body. This is often required by Okta when multiple credentials errors occur.
+
 Standard `X-Forwarded-*` headers are injected in all modes via `r.SetXForwarded()`.
 
 ## Known Gaps & Roadmap

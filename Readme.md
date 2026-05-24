@@ -48,14 +48,12 @@ The diagram below shows the flow of http traffic (request/response) via the `goi
                          [ OIDC auth server]
                                   ^
                                  /|\
-                                  |
                                   |                 _______ /web   ---> [ webapp ]
                                   |                / 
- [ client ] <---->[ LB ]<--->[ goidc-proxy ] _____/_______ /api/v3 ---> [ service-v3]
+ [ client ] <---> [ LB ] <---> [ goidc-proxy ] ___/_______ /api/v3 ---> [ service-v3]
                                   ^               \
                                  /|\               \_____ /api/v1  ---> [ service-v1 ]
                                   |                
-                                  |
                              [ proxy.yml ]
 
 ```
@@ -90,7 +88,7 @@ Sessions are stored in an in-memory cache so only a single instance of the proxy
 
 The configuration settings for the authorization server, session & proxy server itself are pretty straightfoward & self-explanatory. 
 
-ßThe `goidc-proxy` is primarily configured via a yaml file. However, some configuration can be overridden from the environment variables. e.g secrets should not be stored in the yaml, rather supplied at runtime.
+The `goidc-proxy` is primarily configured via a yaml file. However, some configuration can be overridden from the environment variables. e.g secrets should not be stored in the yaml, rather supplied at runtime.
 
 ### Yaml Configuration:
 
@@ -114,7 +112,7 @@ server:
 # client credentials must be ideally supplied via environment variables
 oidc: 
   # client ID for oidc authoriztion-code flow; preferably supply via env. GOIDC_OIDC_CLIENT_ID
-  clientID: <secret>     
+  clientId: <secret>     
   # client Secret for the  authorization-code flow; preferably supply via env. GOIDC_OIDC_CLIENT_SECRET
   clientSecret: <secret> 
   # metadata can be supplied directly under this item
@@ -142,6 +140,9 @@ oidc:
   # default: uses X-Auth-Access-Token and X-Auth-Id-Token
   # aws: simulates AWS ALB OIDC headers (x-amzn-oidc-*)
   propagationPolicy: default 
+  # token endpoint authentication method, client_secret_basic | client_secret_post.
+  # Use client_secret_post if your IdP (like Okta) complains about multiple credentials.
+  tokenEndpointAuthMethod: client_secret_basic
 
 
 # SECTION 3

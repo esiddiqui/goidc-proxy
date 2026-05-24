@@ -45,9 +45,9 @@ func setDefaults(cfg *GoidcConfig) {
 
 	oidc := &cfg.Oidc
 
-	if oidc.EndpiontMountBase == nil {
+	if oidc.EndpointMountBase == nil {
 		log.WithField("oidc.endpointMountBase", defaultOidcMountBase).Debug("setting value")
-		oidc.EndpiontMountBase = &defaultOidcMountBase
+		oidc.EndpointMountBase = &defaultOidcMountBase
 	}
 
 	if oidc.CallbackPath == nil {
@@ -72,6 +72,10 @@ func setDefaults(cfg *GoidcConfig) {
 
 	if oidc.PropagationPolicy == "" {
 		oidc.PropagationPolicy = PropagationPolicyDefault
+	}
+
+	if oidc.TokenEndpointAuthMethod == "" {
+		oidc.TokenEndpointAuthMethod = TokenEndpointAuthMethodClientSecretBasic
 	}
 
 }

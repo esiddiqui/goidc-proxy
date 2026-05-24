@@ -1,0 +1,45 @@
+# resources/proxy-okta.yml
+# This example configuration shows how to use goidc-proxy with Okta
+# as the IdP, protecting only a specific path (/mcp) for an upstream service.
+
+server: 
+  port: 3939 
+  session:
+    cookie:
+      name: okta_session_id
+    store:
+      type: memory 
+
+oidc: 
+  # It is recommended to provide these via environment variables:
+  # GOIDC_CLIENT_ID and GOIDC_CLIENT_SECRET
+  clientID: ${OKTA_CLIENT_ID}
+  clientSecret: ${OKTA_CLIENT_SECRET}
+  
+  # Okta's well-known metadata URL
+  # Replace <okta-domain> with your actual Okta domain
+  metadataUrl: https://<okta-domain>.okta.com/.well-known/openid-configuration
+  
+  endpointMountBase: /oidc 
+  authCallbackPath: /authorization-code/callback
+  
+  scopes:
+   - openid
+   - profile
+   - email
+
+  # Set propagationPolicy to 'aws' if your upstream app expects AWS ALB headers
+  # propagationPolicy: default
+
+routes: 
+  # Route 1: Protected path /mcp
+  - prefix: /mcp
+    stripPrefix: false                   
+    upstreamUrl: http://localhost:8080
+    authRequired: yes
+
+  # Route 2: Default catch-all (proxies everything else without auth)
+  - prefix: /                           
+    stripPrefix: false                   
+    upstreamUrl: http://localhost:8080
+    authRequired: no

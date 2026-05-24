@@ -29,6 +29,13 @@ const (
 	PropagationPolicyAWS     PropagationPolicy = "aws"
 )
 
+type TokenEndpointAuthMethod string
+
+const (
+	TokenEndpointAuthMethodClientSecretBasic TokenEndpointAuthMethod = "client_secret_basic"
+	TokenEndpointAuthMethodClientSecretPost  TokenEndpointAuthMethod = "client_secret_post"
+)
+
 type CookieConfig struct {
 	Name       string `yaml:"name"`
 	AgeSeconds int    `yaml:"ageSeconds"`
@@ -62,19 +69,20 @@ type ServerConfig struct {
 }
 
 type OidConfig struct {
-	ClientId          string                    `yaml:"clientId"`
-	ClientSecret      string                    `yaml:"clientSecret"`
-	MetadataUrl       string                    `yaml:"metadataUrl"`       // public url for fetching metadata
-	Metadata          *types.AuthServerMetadata `yaml:"metadata"`          // if supplied `metadataUrl` is ignored
-	OpenIdMetadataUrl string                    `yaml:"openIdMetadataUrl"` // public url for fetching openId metadata
-	OpenIdMetadata    *GoidcConfig              `yaml:"openIdMetadata"`    // if supplied `openIdMetadataUrl` is ignored
-	EndpiontMountBase *string                   `yaml:"endpointMountBase"` // the base path to mount all oidc paths
-	CallbackPath      *string                   `yaml:"callbackPath"`      // sub-path to handle auth-code callback
-	UserInfoPath      *string                   `yaml:"userInfoPath"`      // sub-path to handle userInfo path (available when oidc userInfo endpoint exists)
-	InfoPath          *string                   `yaml:"infoPath"`          // sub-path for info path
-	SessionPath       *string                   `yaml:"sessionPath"`       // sub-path for session path
-	Scopes            []string                  `yaml:"scopes"`
-	PropagationPolicy PropagationPolicy         `yaml:"propagationPolicy"`
+	ClientId                string                    `yaml:"clientId"`
+	ClientSecret            string                    `yaml:"clientSecret"`
+	MetadataUrl             string                    `yaml:"metadataUrl"`       // public url for fetching metadata
+	Metadata                *types.AuthServerMetadata `yaml:"metadata"`          // if supplied `metadataUrl` is ignored
+	OpenIdMetadataUrl       string                    `yaml:"openIdMetadataUrl"` // public url for fetching openId metadata
+	OpenIdMetadata          *GoidcConfig              `yaml:"openIdMetadata"`    // if supplied `openIdMetadataUrl` is ignored
+	EndpointMountBase       *string                   `yaml:"endpointMountBase"` // the base path to mount all oidc paths
+	CallbackPath            *string                   `yaml:"callbackPath"`      // sub-path to handle auth-code callback
+	UserInfoPath            *string                   `yaml:"userInfoPath"`      // sub-path to handle userInfo path (available when oidc userInfo endpoint exists)
+	InfoPath                *string                   `yaml:"infoPath"`          // sub-path for info path
+	SessionPath             *string                   `yaml:"sessionPath"`       // sub-path for session path
+	Scopes                  []string                  `yaml:"scopes"`
+	PropagationPolicy       PropagationPolicy         `yaml:"propagationPolicy"`
+	TokenEndpointAuthMethod TokenEndpointAuthMethod   `yaml:"tokenEndpointAuthMethod"`
 }
 
 type GoidcConfig struct {

@@ -17,10 +17,10 @@ type Store interface {
 
 // Object wraps the data stored for each session key
 type Object struct {
-	TokenRaw       string       `json:"raw"`
-	Value          any          `json:"val"`
-	OrignalRequest http.Request `json:"-"` //reference to the orignal un-auth requeest if oidc flow is triggered
-	ExpiresAt      time.Time    `json:"expiresOn"`
+	TokenRaw        string       `json:"raw"`
+	Value           any          `json:"val"`
+	OriginalRequest http.Request `json:"-"` //reference to the original un-auth request if oidc flow is triggered
+	ExpiresAt       time.Time    `json:"expiresOn"`
 }
 
 type contextKey string

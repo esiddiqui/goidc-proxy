@@ -83,18 +83,18 @@ func (p *HttpServer) startHttpServer() error {
 	// set up all <oidc>/ path handlers
 
 	c := cfg.Oidc
-	shf := p.sessionMgr.GetSessionWrapperHandler(p.getOidcSessionHanlder, p.redirectToAuthServer)
-	http.HandleFunc(fmt.Sprintf("%v%v", *c.EndpiontMountBase, *c.SessionPath), shf)
+	shf := p.sessionMgr.GetSessionWrapperHandler(p.getOidcSessionHandler, p.redirectToAuthServer)
+	http.HandleFunc(fmt.Sprintf("%v%v", *c.EndpointMountBase, *c.SessionPath), shf)
 
-	uhf := p.sessionMgr.GetSessionWrapperHandler(p.getOidcUserInfoHanlder, p.redirectToAuthServer)
-	http.HandleFunc(fmt.Sprintf("%v%v", *c.EndpiontMountBase, *c.UserInfoPath), uhf)
+	uhf := p.sessionMgr.GetSessionWrapperHandler(p.getOidcUserInfoHandler, p.redirectToAuthServer)
+	http.HandleFunc(fmt.Sprintf("%v%v", *c.EndpointMountBase, *c.UserInfoPath), uhf)
 
 	ih := p.sessionMgr.GetSessionWrapperHandler(p.getInfoHandler, p.redirectToAuthServer)
-	http.HandleFunc(fmt.Sprintf("%v%v", *c.EndpiontMountBase, *c.InfoPath), ih) // has to go, for test only.
+	http.HandleFunc(fmt.Sprintf("%v%v", *c.EndpointMountBase, *c.InfoPath), ih) // has to go, for test only.
 
 	// set up authcode callback handler R
 
-	var authCallbackPathFull = fmt.Sprintf("%v%v", *c.EndpiontMountBase, *c.CallbackPath)
+	var authCallbackPathFull = fmt.Sprintf("%v%v", *c.EndpointMountBase, *c.CallbackPath)
 	log.WithField("path", authCallbackPathFull).Debug("setting auth callback path")
 	http.HandleFunc(authCallbackPathFull, p.authCodeCallbackHandler)
 

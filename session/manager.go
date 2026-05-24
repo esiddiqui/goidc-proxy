@@ -149,8 +149,8 @@ func (m Manager) Set(w http.ResponseWriter, token string, value Object) error {
 
 // http handlers
 
-// getSessionWrapperHandler returns an http.HanlderFunc, which checks for a valid
-// session & if it exists, calls the yesHandler, & if not the noHanlder.
+// getSessionWrapperHandler returns an http.HandlerFunc, which checks for a valid
+// session & if it exists, calls the yesHandler, & if not the noHandler.
 func (m Manager) GetSessionWrapperHandler(yesHandler, noHandler http.HandlerFunc) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
